@@ -1,0 +1,41 @@
+# Logs and runtime junk
+*.log
+*.tmp
+*.pid
+*.sock
+
+# Backups and junk files
+*~
+*.bak
+*.swp
+*.swo
+
+# IDE/editor files
+.vscode/
+.idea/
+*.iml
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Compiled binaries + archives
+*.out
+*.exe
+*.o
+*.so
+*.tar
+*.gz
+*.zip
+
+# Python venv
+venv/
+__pycache__/
+*.pyc
+
+# Secrets
+*.env
+*.key
+*.pem
+secrets/
+credentials/
