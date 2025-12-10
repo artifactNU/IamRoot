@@ -65,7 +65,7 @@ echo "Collecting info for $HOSTNAME..."
   echo
 
   echo "=== Disks & Mounts ==="
-  if command -v lsblk >/dev/null 2>&1; then
+  if command -v lsblk >/devnull 2>&1; then
     lsblk -o NAME,SIZE,TYPE,MOUNTPOINT | sed 's/^/  /'
   else
     echo "  'lsblk' command not available"
@@ -85,6 +85,7 @@ echo "Collecting info for $HOSTNAME..."
   echo
 
   echo "=== Sudo Users and Their Groups ==="
+  SUDO_MEMBERS=""
   if getent group sudo >/dev/null 2>&1; then
     SUDO_LINE=$(getent group sudo)
     SUDO_MEMBERS=$(echo "$SUDO_LINE" | awk -F: '{print $4}')
@@ -107,6 +108,71 @@ echo "Collecting info for $HOSTNAME..."
   else
     echo "  Group 'sudo' does not exist on this system."
   fi
+  echo
+
+  echo "=== User Cron Jobs (per-user crontabs) ==="
+  ANY_USER_CRON=0
+  # Loop over all "human" users (UID >= 1000, < 65534)
+  while IFS=: read -r uname _ uid _ _ home _; do
+    if [ "$uid" -ge 1000 ] && [ "$uid" -lt 65534 ]; then
+      if crontab -u "$uname" -l >/tmp/.ws_cron_$$ 2>/dev/null; then
+        if [ $ANY_USER_CRON -eq 0 ]; then
+          ANY_USER_CRON=1
+        fi
+        echo "  --- User: $uname ---"
+        sed 's/^/    /' /tmp/.ws_cron_$$
+        echo
+        rm -f /tmp/.ws_cron_$$
+      fi
+    fi
+  done < /etc/passwd
+
+  if [ $ANY_USER_CRON -eq 0 ]; then
+    echo "  No per-user crontabs found for local human users."
+  fi
+  echo
+
+  echo "=== Non-default System Cron Jobs (/etc/crontab and /etc/cron.d) ==="
+  SYS_CRON_TEMP=/tmp/.ws_syscron_$$
+  : > "$SYS_CRON_TEMP"
+
+  # We consider as "interesting" any cron line where:
+  #   - the user field is NOT root
+  #   OR
+  #   - the command contains /home, /usr/local, /opt, /srv, /data
+  FILES_TO_CHECK=""
+  [ -f /etc/crontab ] && FILES_TO_CHECK="/etc/crontab"
+  if [ -d /etc/cron.d ]; then
+    FILES_TO_CHECK="$FILES_TO_CHECK /etc/cron.d/*"
+  fi
+
+  for f in $FILES_TO_CHECK; do
+    [ -f "$f" ] || continue
+    awk '
+      $0 !~ /^[[:space:]]*$/ && $0 !~ /^[[:space:]]*#/ {
+        # /etc/crontab and /etc/cron.d format:
+        # m h dom mon dow user command...
+        if (NF >= 7) {
+          user = $6
+          cmd = ""
+          for (i = 7; i <= NF; i++) {
+            cmd = cmd " " $i
+          }
+          if (user != "root" || cmd ~ /(\/home\/|\/usr\/local\/|\/opt\/|\/srv\/|\/data\/)/) {
+            print FILENAME ":" $0
+          }
+        }
+      }
+    ' "$f" >> "$SYS_CRON_TEMP"
+  done
+
+  if [ -s "$SYS_CRON_TEMP" ]; then
+    sed 's/^/  /' "$SYS_CRON_TEMP"
+  else
+    echo "  No non-default-looking system cron jobs found."
+  fi
+
+  rm -f "$SYS_CRON_TEMP"
   echo
 
   echo "===== END OF REPORT ====="
