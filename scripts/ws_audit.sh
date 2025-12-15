@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# Simple workstation info collector
+# ws_audit.sh
+# Purpose: Collect read-only workstation inventory and configuration information
+# Usage:   ./ws_audit.sh
+# Output:  ws_<hostname>_info.txt
 
 set -e
 

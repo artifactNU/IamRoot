@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# gpu_diag.sh
+# Purpose: Collect read-only NVIDIA GPU and system diagnostics for troubleshooting
+# Usage:   ./gpu_diag.sh
+# Output:  gpu_diagnostics_<hostname>_<YYYYMMDD_HHMMSS>.txt
 
 OUTFILE="gpu_diagnostics_$(hostname)_$(date +%Y%m%d_%H%M%S).txt"
 
