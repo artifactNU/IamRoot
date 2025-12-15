@@ -16,6 +16,7 @@ echo "Collecting info for $HOSTNAME..."
 
   echo "=== OS & Kernel ==="
   if [ -f /etc/os-release ]; then
+    # shellcheck disable=SC1091
     . /etc/os-release
     echo "OS: $PRETTY_NAME"
   else
@@ -113,7 +114,7 @@ echo "Collecting info for $HOSTNAME..."
   echo "=== User Cron Jobs (per-user crontabs) ==="
   ANY_USER_CRON=0
   # Loop over all "human" users (UID >= 1000, < 65534)
-  while IFS=: read -r uname _ uid _ _ home _; do
+  while IFS=: read -r uname _ uid _ _ _ _; do
     if [ "$uid" -ge 1000 ] && [ "$uid" -lt 65534 ]; then
       if crontab -u "$uname" -l >/tmp/.ws_cron_$$ 2>/dev/null; then
         if [ $ANY_USER_CRON -eq 0 ]; then
