@@ -69,7 +69,7 @@ echo "Collecting info for $HOSTNAME..."
   echo
 
   echo "=== Disks & Mounts ==="
-  if command -v lsblk >/devnull 2>&1; then
+  if command -v lsblk >/dev/null 2>&1; then
     lsblk -o NAME,SIZE,TYPE,MOUNTPOINT | sed 's/^/  /'
   else
     echo "  'lsblk' command not available"
