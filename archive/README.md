@@ -55,11 +55,11 @@ Where possible, deprecated items should include:
 
 ## Usage Policy
 
-- ❌ Do **not** use archived scripts in production
-- ❌ Do **not** reference archived content in new documentation
-- ❌ Do **not** add new features to archived items
+- Do **not** use archived scripts in production
+- Do **not** reference archived content in new documentation
+- Do **not** add new features to archived items
 
-- ✅ You *may* read archived content for:
+- You **may** read archived content for:
   - historical understanding
   - debugging legacy systems
   - learning from past mistakes
