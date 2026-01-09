@@ -127,8 +127,8 @@ parse_sudo_logs() {
         print_warning "Could not calculate cutoff date, showing all available logs"
     fi
     
-    local log_files
-    log_files=($(get_log_files "$log_file" "$days"))
+    local -a log_files
+    mapfile -t log_files < <(get_log_files "$log_file" "$days")
     
     for log in "${log_files[@]}"; do
         read_logs "$log"
@@ -158,9 +158,12 @@ analyze_successful_commands() {
     if [[ "$VERBOSE" == true ]]; then
         echo -e "\n${CYAN}Recent Commands (last 20):${NC}"
         echo "$success_data" | tail -20 | while IFS= read -r line; do
-            local timestamp=$(echo "$line" | grep -oP '^\w+\s+\d+\s+\d+:\d+:\d+')
-            local user=$(echo "$line" | grep -oP '(?<=: ).*?(?= :)' | head -1)
-            local command=$(echo "$line" | grep -oP '(?<=COMMAND=).*')
+            local timestamp
+            local user
+            local command
+            timestamp=$(echo "$line" | grep -oP '^\w+\s+\d+\s+\d+:\d+:\d+')
+            user=$(echo "$line" | grep -oP '(?<=: ).*?(?= :)' | head -1)
+            command=$(echo "$line" | grep -oP '(?<=COMMAND=).*')
             printf "  ${BLUE}%s${NC} | ${YELLOW}%-12s${NC} | %s\n" "$timestamp" "$user" "$command"
         done
     fi
@@ -195,8 +198,10 @@ analyze_failed_attempts() {
     if [[ "$VERBOSE" == true ]]; then
         echo -e "\n${CYAN}Recent Failed Attempts (last 15):${NC}"
         echo "$failed_data" | tail -15 | while IFS= read -r line; do
-            local timestamp=$(echo "$line" | grep -oP '^\w+\s+\d+\s+\d+:\d+:\d+')
-            local user=$(echo "$line" | grep -oP '(?<=user=)[^ ]+' || echo "unknown")
+            local timestamp
+            local user
+            timestamp=$(echo "$line" | grep -oP '^\w+\s+\d+\s+\d+:\d+:\d+')
+            user=$(echo "$line" | grep -oP '(?<=user=)[^ ]+' || echo "unknown")
             printf "  ${RED}%s${NC} | ${YELLOW}%-12s${NC} | %s\n" "$timestamp" "$user" "FAILED AUTHENTICATION"
         done
     fi
@@ -217,16 +222,20 @@ show_summary() {
     
     echo -e "\n${CYAN}=== Summary ===${NC}\n"
     
-    local total_commands=$(echo "$data" | grep -c "COMMAND=" || echo "0")
-    local failed_attempts=$(echo "$data" | grep -cE "(authentication failure|incorrect password)" || echo "0")
-    local unique_users=$(echo "$data" | grep -oP '(?<=: ).*?(?= :)' | sort -u | wc -l)
+    local total_commands
+    local failed_attempts
+    local unique_users
+    total_commands=$(echo "$data" | grep -c "COMMAND=" || echo "0")
+    failed_attempts=$(echo "$data" | grep -cE "(authentication failure|incorrect password)" || echo "0")
+    unique_users=$(echo "$data" | grep -oP '(?<=: ).*?(?= :)' | sort -u | wc -l)
     
     printf "  Total sudo commands:    %5d\n" "$total_commands"
     printf "  Failed attempts:        %5d\n" "$failed_attempts"
     printf "  Unique users:           %5d\n" "$unique_users"
     
     if [[ $failed_attempts -gt 0 ]]; then
-        local failure_rate=$(awk "BEGIN {printf \"%.1f\", ($failed_attempts/($total_commands+$failed_attempts))*100}")
+        local failure_rate
+        failure_rate=$(awk "BEGIN {printf \"%.1f\", ($failed_attempts/($total_commands+$failed_attempts))*100}")
         printf "  Failure rate:           %5s%%\n" "$failure_rate"
     fi
 }
