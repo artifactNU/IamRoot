@@ -1,0 +1,282 @@
+# .bashrc.example
+# Simple bash configuration for system administration work
+# Copy to ~/.bashrc and customize as needed
+
+# If not running interactively, don't do anything
+[[ $- != *i* ]] && return
+
+# ============================================================================
+# HISTORY
+# ============================================================================
+
+# Append to history file, don't overwrite
+shopt -s histappend
+
+# Large history for troubleshooting and audit trail
+HISTSIZE=10000
+HISTFILESIZE=20000
+
+# Timestamps in history
+HISTTIMEFORMAT="%Y-%m-%d %H:%M:%S  "
+
+# Ignore duplicates and commands starting with space
+HISTCONTROL=ignoreboth
+
+# Save history after each command
+PROMPT_COMMAND="history -a; $PROMPT_COMMAND"
+
+# ============================================================================
+# SHELL OPTIONS
+# ============================================================================
+
+# Check window size after each command
+shopt -s checkwinsize
+
+# Autocorrect minor typos in cd commands
+shopt -s cdspell
+
+# Enable extended pattern matching
+shopt -s extglob
+
+# ============================================================================
+# PROMPT
+# ============================================================================
+
+# Color codes
+RED='\[\e[0;31m\]'
+GREEN='\[\e[0;32m\]'
+YELLOW='\[\e[0;33m\]'
+BLUE='\[\e[0;34m\]'
+RESET='\[\e[0m\]'
+
+# Show username@host in red if root, green otherwise
+if [ "$EUID" -eq 0 ]; then
+    USER_COLOR="$RED"
+else
+    USER_COLOR="$GREEN"
+fi
+
+# Simple two-line prompt with exit status indicator
+PS1="${USER_COLOR}\u@\h${RESET}:${BLUE}\w${RESET}\n\$ "
+
+# ============================================================================
+# SAFETY ALIASES
+# ============================================================================
+
+# Confirm before overwriting
+alias cp='cp -i'
+alias mv='mv -i'
+alias rm='rm -i'
+
+# Safer removal - move to trash if available
+# alias rm='echo "Use trash-put or /bin/rm"; false'
+
+# ============================================================================
+# LISTING & NAVIGATION
+# ============================================================================
+
+alias ls='ls --color=auto'
+alias ll='ls -lh'
+alias la='ls -lAh'
+alias l='ls -CF'
+
+# Quick navigation
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+
+# Show directories only
+alias lsd='ls -d */'
+
+# ============================================================================
+# GREP & SEARCH
+# ============================================================================
+
+alias grep='grep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias egrep='egrep --color=auto'
+
+# ============================================================================
+# SYSTEM ADMINISTRATION
+# ============================================================================
+
+# Quick status checks
+alias ports='netstat -tulanp'
+alias listening='ss -tlnp'
+alias meminfo='free -h'
+alias diskinfo='df -h'
+alias cpuinfo='lscpu'
+
+# Process management
+alias psg='ps aux | grep -v grep | grep -i -e VSZ -e'
+alias psmem='ps auxf | sort -nr -k 4 | head -10'
+alias pscpu='ps auxf | sort -nr -k 3 | head -10'
+
+# Systemd shortcuts
+alias sctl='systemctl'
+alias jctl='journalctl'
+alias jctlf='journalctl -f'
+
+# Quick logs
+alias tailf='tail -f'
+alias syslog='tail -f /var/log/syslog'
+alias messages='tail -f /var/log/messages'
+
+# Network
+alias myip='curl -s ifconfig.me'
+alias localip='ip -4 addr show | grep -oP "(?<=inet\s)\d+(\.\d+){3}"'
+
+# Disk usage
+alias ducks='du -csh * | sort -rh | head -11'
+alias ducksall='du -ach | sort -rh | head -20'
+
+# ============================================================================
+# SAFE OPERATIONS
+# ============================================================================
+
+# Find files modified in last N days
+alias recent='find . -type f -mtime -7 -ls'
+
+# Count files in directory
+alias count='find . -type f | wc -l'
+
+# ============================================================================
+# GIT (if applicable)
+# ============================================================================
+
+alias gs='git status'
+alias ga='git add'
+alias gc='git commit'
+alias gp='git push'
+alias gl='git log --oneline'
+alias gd='git diff'
+alias gb='git branch'
+
+# ============================================================================
+# FUNCTIONS
+# ============================================================================
+
+# Create directory and cd into it
+mkcd() {
+    mkdir -p "$1" && cd "$1"
+}
+
+# Extract various archive formats
+extract() {
+    if [ -f "$1" ]; then
+        case "$1" in
+            *.tar.bz2)   tar xjf "$1"    ;;
+            *.tar.gz)    tar xzf "$1"    ;;
+            *.tar.xz)    tar xJf "$1"    ;;
+            *.bz2)       bunzip2 "$1"    ;;
+            *.gz)        gunzip "$1"     ;;
+            *.tar)       tar xf "$1"     ;;
+            *.tbz2)      tar xjf "$1"    ;;
+            *.tgz)       tar xzf "$1"    ;;
+            *.zip)       unzip "$1"      ;;
+            *.Z)         uncompress "$1" ;;
+            *.7z)        7z x "$1"       ;;
+            *)           echo "'$1' cannot be extracted via extract()" ;;
+        esac
+    else
+        echo "'$1' is not a valid file"
+    fi
+}
+
+# Find process by name
+psgrep() {
+    ps aux | grep -v grep | grep -i "$1"
+}
+
+# Kill process by name (with confirmation)
+killnamed() {
+    if [ -z "$1" ]; then
+        echo "Usage: killnamed <process-name>"
+        return 1
+    fi
+    ps aux | grep -v grep | grep -i "$1"
+    echo -n "Kill these processes? (y/N) "
+    read -r response
+    if [[ "$response" =~ ^[Yy]$ ]]; then
+        pkill -i "$1"
+    fi
+}
+
+# Show top 10 commands from history
+top10() {
+    history | awk '{print $4}' | sort | uniq -c | sort -rn | head -10
+}
+
+# Quick backup of a file
+backup() {
+    cp "$1" "$1.backup-$(date +%Y%m%d-%H%M%S)"
+}
+
+# Show all listening ports with process names (requires root)
+whatsonport() {
+    if [ -z "$1" ]; then
+        echo "Usage: whatsonport <port-number>"
+        return 1
+    fi
+    lsof -i ":$1" || ss -tlnp | grep ":$1"
+}
+
+# ============================================================================
+# PATH
+# ============================================================================
+
+# Add local bin to PATH if it exists
+if [ -d "$HOME/bin" ]; then
+    PATH="$HOME/bin:$PATH"
+fi
+
+if [ -d "$HOME/.local/bin" ]; then
+    PATH="$HOME/.local/bin:$PATH"
+fi
+
+# ============================================================================
+# COMPLETIONS
+# ============================================================================
+
+# Enable bash completion
+if [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+fi
+
+# Enable programmable completion features
+if ! shopt -oq posix; then
+    if [ -f /usr/share/bash-completion/bash_completion ]; then
+        . /usr/share/bash-completion/bash_completion
+    elif [ -f /etc/bash_completion ]; then
+        . /etc/bash_completion
+    fi
+fi
+
+# ============================================================================
+# ENVIRONMENT
+# ============================================================================
+
+# Default editor
+export EDITOR=vim
+export VISUAL=vim
+
+# Less options
+export LESS='-R -M -i'
+
+# Colored man pages
+export LESS_TERMCAP_mb=$'\e[1;32m'     # begin bold
+export LESS_TERMCAP_md=$'\e[1;34m'     # begin blink
+export LESS_TERMCAP_me=$'\e[0m'        # reset bold/blink
+export LESS_TERMCAP_so=$'\e[01;44;33m' # begin reverse video
+export LESS_TERMCAP_se=$'\e[0m'        # reset reverse video
+export LESS_TERMCAP_us=$'\e[1;32m'     # begin underline
+export LESS_TERMCAP_ue=$'\e[0m'        # reset underline
+
+# ============================================================================
+# LOCAL CUSTOMIZATIONS
+# ============================================================================
+
+# Source local bashrc if it exists (for machine-specific settings)
+if [ -f ~/.bashrc.local ]; then
+    . ~/.bashrc.local
+fi
