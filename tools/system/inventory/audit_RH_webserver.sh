@@ -51,21 +51,36 @@ echo "Collecting web server audit for ${HOSTNAME}..."
     md_note "\`ss\` not available."
   fi
 
-  #######################################
-  md_h2 "Firewall"
-  #######################################
+#######################################
+md_h2 "Firewall"
+#######################################
 
-  if have firewall-cmd && systemctl is-active firewalld >/dev/null 2>&1; then
+if have firewall-cmd; then
+  if systemctl is-active firewalld >/dev/null 2>&1; then
     md_kv "firewalld status" "active"
 
-    md_h3 "Active Zones"
+    md_h3 "Active Firewall Zones"
     firewall-cmd --get-active-zones | md_code
 
-    md_h3 "Firewall Rules (all zones)"
-    firewall-cmd --list-all --all-zones | md_code
+    md_h3 "Firewall Rules"
+
+    # firewalld CLI differs between EL8 and EL9
+    if firewall-cmd --help 2>&1 | grep -q -- '--list-all-zones'; then
+      # EL9+ (newer firewalld)
+      firewall-cmd --list-all-zones | md_code
+    else
+      # EL7 / EL8 (older firewalld)
+      firewall-cmd --list-all | md_code
+
+      md_note "Older firewalld detected; showing rules for the default/active zone only."
+    fi
   else
-    md_note "firewalld not running or not installed."
+    md_note "firewalld installed but not running."
   fi
+else
+  md_note "firewalld not installed."
+fi
+
 
   #######################################
   md_h2 "SELinux"
