@@ -1,37 +1,28 @@
-# NVIDIA GPU Preflight & Install Order (APT)
+## NVIDIA GPU Preflight & Install Order (APT)
 
 Quick reference for verifying GPU presence and installing NVIDIA drivers safely on Ubuntu.
-Use this when promoting a host from CPU-only to GPU-capable.
 
----
+### Before You Start
 
-## Preflight: Verify GPU Hardware
-
+**Verify GPU hardware:**
+```bash
 lspci | grep -i nvidia
 lspci -nn | grep -Ei 'vga|3d|display'
+```
+Expected: NVIDIA Corporation → GPU-capable host  
+No NVIDIA device → **do NOT install drivers**
 
-Expected:
-- NVIDIA Corporation → GPU-capable host
-- No NVIDIA device → do NOT install drivers
-
----
-
-## Preflight: Verify Current NVIDIA State
-
+**Check current state:**
+```bash
 lsmod | grep nvidia
 command -v nvidia-smi
-
----
-
-## Preflight: Check Kernel & OS
-
 uname -r
 lsb_release -a
+```
 
----
+### Installation Steps
 
-## Install Order (GPU Node)
-
+```bash
 # 1. Install NVIDIA driver
 sudo apt install nvidia-driver-535
 
@@ -51,73 +42,54 @@ sudo apt-mark hold \
 
 # 5. Run normal system upgrade
 sudo apt upgrade
+```
 
----
+### Package Management
 
-## Check What's on Hold
-
-# Show all packages on hold
+**Check held packages:**
+```bash
 apt-mark showhold
-
-# Check if specific NVIDIA packages are held
 apt-mark showhold | grep nvidia
+```
 
-# Unhold a package (if needed)
+**Unhold if needed:**
+```bash
 sudo apt-mark unhold nvidia-driver-535
+```
 
----
-
-## Check Installed NVIDIA Package Versions
-
-# List all installed NVIDIA packages
+**Check installed versions:**
+```bash
 dpkg -l | grep nvidia
-
-# Check specific driver version
-dpkg -l | grep nvidia-driver
-
-# Check if 535 or another version is installed
 apt list --installed | grep nvidia-driver
-
-# Show detailed package info
 apt show nvidia-driver-535
-
-# Check available driver versions
 apt search nvidia-driver-[0-9]
+```
 
----
+### Diagnostics
 
-## Troubleshooting & Maintenance
-
-# Check if NVIDIA kernel modules are loaded
+```bash
+# Check kernel modules
 lsmod | grep nvidia
-
-# View NVIDIA driver version from nvidia-smi
-nvidia-smi --query-gpu=driver_version --format=csv,noheader
-
-# Check for conflicting nouveau driver
 lsmod | grep nouveau
 
-# View DKMS status (Dynamic Kernel Module Support)
-dkms status | grep nvidia
-
-# Check for NVIDIA processes
-fuser -v /dev/nvidia*
-
-# View CUDA version (if CUDA installed)
-nvcc --version
-
-# Check GPU temperature and utilization
+# Driver info
+nvidia-smi --query-gpu=driver_version --format=csv,noheader
 nvidia-smi --query-gpu=temperature.gpu,utilization.gpu --format=csv
 
----
+# DKMS and processes
+dkms status | grep nvidia
+fuser -v /dev/nvidia*
 
-## Common Issues
+# CUDA version (if installed)
+nvcc --version
+```
 
-# If upgrade wants to remove NVIDIA packages
-# First, check what's trying to be removed:
+**Common fixes:**
+```bash
+# If upgrade wants to remove NVIDIA packages:
 sudo apt upgrade --dry-run
 
-# If NVIDIA packages conflict, unhold temporarily:
+# If packages conflict, temporarily unhold:
 sudo apt-mark unhold $(apt-mark showhold | grep nvidia)
 sudo apt upgrade
 # Then re-hold after verifying nvidia-smi works
@@ -125,14 +97,10 @@ sudo apt upgrade
 # If driver not loading after kernel update:
 sudo dkms autoinstall
 sudo reboot
+```
 
----
-
-## Notes
-
-- Do not install nvidia-utils without the full driver
-- Do not install NVIDIA drivers if no NVIDIA hardware is detected
+**Important notes:**
 - Always reboot immediately after driver installation
-- Hold NVIDIA packages once the driver is verified
-- Check held packages before system upgrades to avoid conflicts
-- Different Ubuntu versions may have different driver versions available (e.g., 535, 545, 550)
+- Hold NVIDIA packages once verified
+- Don't install drivers if no NVIDIA hardware detected
+- Check held packages before system upgrades
