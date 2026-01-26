@@ -1,0 +1,115 @@
+###############################################################################
+# Example: Automated Let's Encrypt certificate renewal (REFERENCE TEMPLATE)
+#
+# Purpose:
+#   Demonstrate standardized patterns for certbot-based certificate renewal
+#   with safe, non-disruptive Apache reloads.
+#
+# IMPORTANT:
+#   - This file is NOT intended to be deployed verbatim.
+#   - All commands below are examples.
+#   - Server-specific values MUST be reviewed and adapted.
+#
+# Preconditions (MUST be true for any server using this pattern):
+#   - systemd-based Linux distribution
+#   - certbot installed and configured
+#   - Certificates already issued (this does NOT issue first certs)
+#   - Apache-compatible web server
+#   - Root execution context
+#
+###############################################################################
+
+###############################################################################
+# STANDARDIZED TEMPLATE (WITH DROP-IN POINTS)
+###############################################################################
+
+# Server-specific values (replace before use):
+#   <PYTHON_BIN>     : Path to python interpreter (e.g. /usr/bin/python3)
+#   <CERTBOT_BIN>   : Path to certbot (e.g. /usr/bin/certbot or /bin/certbot)
+#   <WEB_SERVICE>   : Web service to reload (e.g. httpd, apache2)
+#   <LOG_DIR>       : Directory for logs (must exist)
+#
+# Schedule:
+#   Twice daily with random delay (prevents synchronized renewals)
+
+# 0 0,12 * * * \
+# <PYTHON_BIN> - <<'EOF'
+# import random, time
+# time.sleep(random.random() * 3600)
+# EOF
+# && <CERTBOT_BIN> renew \
+#    --deploy-hook "systemctl reload <WEB_SERVICE>" \
+# >> <LOG_DIR>/certbot-renew.log 2>&1
+
+
+###############################################################################
+# REAL-WORLD IMPLEMENTATIONS (DESCRIPTIVE, COMMENTED OUT)
+#
+# The examples below correspond to real production systems.
+# They are identified by configuration characteristics and operational intent,
+# not by hostname.
+###############################################################################
+
+###############################################################################
+# EXAMPLE A: Multi-tenant research web server with extensive legacy footprint
+#
+# Identifying characteristics:
+#   - Large number of virtual hosts and certificates
+#   - Long operational history
+#   - Explicit logging to a non-standard filesystem location
+#   - No random delay (single host, low renewal collision risk)
+#
+# Rationale:
+#   - Predictability and auditability prioritized over elegance
+#   - Logging location reflects historical storage layout
+###############################################################################
+
+# 0 0,12 * * * \
+# (echo "Renew certbot, Date: $(date)"; \
+#  /bin/certbot renew --deploy-hook "systemctl reload httpd") \
+# >> /var/log/certbot/renew.log 2>&1
+
+
+###############################################################################
+# EXAMPLE B: Moderately modernized web server with mixed scheduling models
+#
+# Identifying characteristics:
+#   - Cron-based renewal with randomized delay
+#   - Quiet certbot execution
+#   - systemd certbot-renew.timer may also be present
+#
+# Rationale:
+#   - Random delay reduces synchronized ACME requests
+#   - Quiet mode keeps logs clean
+#   - Dual scheduling reflects gradual migration toward systemd timers
+###############################################################################
+
+# 0 0,12 * * * \
+# python3 -c 'import random, time; time.sleep(random.random() * 3600)' \
+# && /usr/bin/certbot renew -q \
+#    --deploy-hook "systemctl reload httpd"
+
+
+###############################################################################
+# EXAMPLE C: Small, purpose-focused web server with minimal operational surface
+#
+# Identifying characteristics:
+#   - Few certificates
+#   - Cron-only automation
+#   - Randomized delay
+#   - No explicit logging
+#
+# Rationale:
+#   - Simplicity favored over observability
+#   - Low operational risk allows minimal configuration
+###############################################################################
+
+# 0 0,12 * * * \
+# python3 -c 'import random, time; time.sleep(random.random() * 3600)' \
+# && /usr/bin/certbot renew -q \
+#    --deploy-hook "systemctl reload httpd"
+
+
+###############################################################################
+# END OF FILE
+###############################################################################
