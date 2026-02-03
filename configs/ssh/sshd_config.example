@@ -1,0 +1,274 @@
+# sshd_config.example
+# Hardened SSH server configuration
+# 
+# Copy to: /etc/ssh/sshd_config
+# Test with: sshd -t
+# Apply with: systemctl restart sshd
+#
+# Compatible with OpenSSH 7.4+ (Ubuntu 20.04+)
+
+# ============================================================================
+# NETWORK AND PORT CONFIGURATION
+# ============================================================================
+
+# Default port (consider changing to non-standard port for reduced noise)
+Port 22
+
+# Listen on specific interface (optional - comment out to listen on all)
+#ListenAddress 0.0.0.0
+#ListenAddress ::
+
+# Protocol version (only SSH2 is secure)
+# Note: Modern OpenSSH versions default to 2 and ignore this directive
+#Protocol 2
+
+# ============================================================================
+# AUTHENTICATION
+# ============================================================================
+
+# Public key authentication (recommended)
+PubkeyAuthentication yes
+
+# Password authentication (disable for key-only access)
+PasswordAuthentication no
+
+# Challenge-response authentication (disable when using keys only)
+ChallengeResponseAuthentication no
+
+# Kerberos authentication (usually not needed)
+KerberosAuthentication no
+
+# GSSAPI authentication (usually not needed)
+GSSAPIAuthentication no
+
+# Permit empty passwords (never enable)
+PermitEmptyPasswords no
+
+# Root login policy (disable for security)
+# Options: yes, no, prohibit-password, forced-commands-only
+PermitRootLogin no
+
+# Maximum authentication attempts before disconnect
+MaxAuthTries 3
+
+# Maximum concurrent sessions per connection
+MaxSessions 10
+
+# ============================================================================
+# KEY AND CERTIFICATE CONFIGURATION
+# ============================================================================
+
+# Location of authorized_keys file
+AuthorizedKeysFile .ssh/authorized_keys
+
+# Look for authorized_keys in a central location (optional)
+#AuthorizedKeysFile /etc/ssh/authorized_keys/%u
+
+# Disable host-based authentication
+HostbasedAuthentication no
+
+# Ignore rhosts and shosts (legacy, insecure)
+IgnoreRhosts yes
+
+# ============================================================================
+# USER ACCESS CONTROL
+# ============================================================================
+
+# Limit access to specific users (recommended)
+# Only these users can login via SSH
+# Syntax: AllowUsers user1 user2 user3
+AllowUsers alice bob carol
+
+# Allow users with hostname/IP restrictions
+# Syntax: AllowUsers user1@host user2@10.0.0.* user3@*.example.com
+#AllowUsers deploy@10.0.0.* admin@*.example.com support@192.168.1.100
+
+# Or limit by group (alternative to AllowUsers)
+# All members of these groups can login
+# Useful for managing access through system groups
+#AllowGroups sshusers admins wheel
+
+# Deny specific users (blocks before Allow rules)
+# Use when you want to block specific users but allow others
+#DenyUsers guest test nobody
+
+# Deny specific groups
+#DenyGroups restricted blocked
+
+# USAGE PATTERNS:
+#
+# 1. Simple user list (most common):
+#    AllowUsers alice bob charlie
+#
+# 2. Users from specific hosts only:
+#    AllowUsers admin@10.0.0.* deploy@192.168.1.0/24 backup@backup-server
+#
+# 3. Combination of both:
+#    AllowUsers alice bob admin@10.0.0.* deploy@bastion.example.com
+#
+# 4. Using groups (easier management):
+#    AllowGroups sshusers
+#    # Then: usermod -aG sshusers newuser
+#
+# 5. Deny then allow pattern:
+#    DenyUsers root guest
+#    AllowGroups sshusers
+#
+# EVALUATION ORDER:
+#   1. DenyUsers   (if match, reject)
+#   2. AllowUsers  (if match, accept; if no match and AllowUsers exists, reject)
+#   3. DenyGroups  (if match, reject)
+#   4. AllowGroups (if match, accept; if no match and AllowGroups exists, reject)
+#
+# BEST PRACTICES:
+#   - Use AllowUsers or AllowGroups, not both (simpler)
+#   - For teams, use AllowGroups (easier to manage)
+#   - For specific access control, use AllowUsers with host patterns
+#   - Always explicitly allow rather than deny when possible
+#   - Test changes before logging out of active session
+#
+# EXAMPLES:
+#
+#   # Production server - only ops team
+#   AllowGroups ops-team
+#
+#   # Development server - devs and specific admin
+#   AllowGroups developers
+#   AllowUsers sysadmin@10.0.0.5
+#
+#   # Bastion host - restrict by source IP
+#   AllowUsers *@10.0.0.0/8 *@172.16.0.0/12
+#
+#   # Mixed environment
+#   DenyUsers root guest nobody
+#   AllowUsers alice bob deploy@ci-server admin@*.example.com
+
+# ============================================================================
+# SESSION CONFIGURATION
+# ============================================================================
+
+# Keep connections alive (detect dead connections)
+ClientAliveInterval 300
+ClientAliveCountMax 2
+
+# Login grace time (how long to wait for authentication)
+LoginGraceTime 60
+
+# Strict mode checks file permissions (recommended)
+StrictModes yes
+
+# Use PAM for account and session management
+UsePAM yes
+
+# ============================================================================
+# SECURITY FEATURES
+# ============================================================================
+
+# Disable X11 forwarding (unless needed)
+X11Forwarding no
+
+# Disable TCP forwarding (uncomment if not needed)
+#AllowTcpForwarding no
+
+# Disable agent forwarding (uncomment if not needed)
+#AllowAgentForwarding no
+
+# Disable gateway ports (uncomment to prevent remote port forwarding)
+#GatewayPorts no
+
+# Disable stream local forwarding (uncomment if not needed)
+#AllowStreamLocalForwarding no
+
+# Permit user environment variables (usually not needed)
+PermitUserEnvironment no
+
+# Disable tunnel device forwarding (uncomment if not needed)
+#PermitTunnel no
+
+# ============================================================================
+# LOGGING
+# ============================================================================
+
+# Log level for troubleshooting and security auditing
+# Options: QUIET, FATAL, ERROR, INFO, VERBOSE, DEBUG, DEBUG1, DEBUG2, DEBUG3
+SyslogFacility AUTH
+LogLevel VERBOSE
+
+# ============================================================================
+# CRYPTOGRAPHY
+# ============================================================================
+
+# Specify strong key exchange algorithms (modern only)
+KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256
+
+# Specify strong ciphers (AES-GCM preferred)
+Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr
+
+# Specify strong MAC algorithms
+MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512,hmac-sha2-256
+
+# Host key algorithms
+HostKeyAlgorithms ssh-ed25519,rsa-sha2-512,rsa-sha2-256
+
+# ============================================================================
+# BANNER AND MESSAGES
+# ============================================================================
+
+# Display banner before authentication (optional)
+#Banner /etc/ssh/banner.txt
+
+# Print last login information
+PrintLastLog yes
+
+# Print message of the day
+PrintMotd no
+
+# ============================================================================
+# SUBSYSTEMS
+# ============================================================================
+
+# SFTP subsystem (usually needed)
+Subsystem sftp /usr/lib/openssh/sftp-server
+
+# Chroot SFTP users (optional - for restricted file access)
+#Match Group sftponly
+#    ChrootDirectory /home/%u
+#    ForceCommand internal-sftp
+#    AllowTcpForwarding no
+#    X11Forwarding no
+
+# ============================================================================
+# PERFORMANCE
+# ============================================================================
+
+# Compression (delay until after authentication)
+Compression delayed
+
+# TCP keep-alive messages (detect network failures)
+TCPKeepAlive yes
+
+# ============================================================================
+# NOTES
+# ============================================================================
+#
+# After making changes:
+#   1. Test configuration:    sshd -t
+#   2. Reload SSH daemon:     systemctl restart sshd
+#   3. Keep a backup session open when testing
+#   4. Check logs:            journalctl -u sshd -f
+#
+# Security checklist:
+#   [x] Root login disabled
+#   [x] Password authentication disabled
+#   [x] Key-only authentication
+#   [x] User access restricted
+#   [x] Strong crypto algorithms
+#   [x] Verbose logging enabled
+#   [x] Connection timeouts configured
+#
+# Further hardening:
+#   - Change default port (security through obscurity)
+#   - Install and configure fail2ban
+#   - Use two-factor authentication (2FA)
+#   - Implement network-level access controls (firewall)
+#   - Regular audit of authorized_keys files

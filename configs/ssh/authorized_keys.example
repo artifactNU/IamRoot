@@ -1,0 +1,201 @@
+# authorized_keys.example
+# Example SSH authorized_keys file with key restrictions
+#
+# Location: ~/.ssh/authorized_keys (user home directory)
+#        or: /etc/ssh/authorized_keys/<username> (centralized)
+#
+# Permissions: chmod 600 ~/.ssh/authorized_keys
+#              chmod 700 ~/.ssh
+#
+# Each line contains: [options] key-type public-key comment
+
+# ============================================================================
+# BASIC KEY (NO RESTRICTIONS)
+# ============================================================================
+
+# Standard key without restrictions (full access)
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyDataHereThisIsNotReal alice@laptop
+
+# ============================================================================
+# COMMAND RESTRICTION
+# ============================================================================
+
+# Restrict key to run a specific command only
+# Useful for automated scripts or specific tasks
+command="/usr/local/bin/backup-script.sh" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBackupKeyExample backup-automation@server
+
+# Git access (restrict to git commands only)
+command="/usr/bin/git-shell" ssh-rsa AAAAB3NzaC1yc2EAAAAExample git-user@deployment
+
+# Read-only rsync access
+command="rsync --server --sender -vlogDtprze.iLsfxC . /backup/" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIRsyncReadOnly backup-client@server
+
+# Ansible automation (restrict to specific inventory)
+command="/usr/local/bin/ansible-wrapper.sh" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAnsibleKey ansible@controller
+
+# ============================================================================
+# SOURCE IP RESTRICTION
+# ============================================================================
+
+# Allow access only from specific IP address
+from="192.168.1.100" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIRestrictedIP alice@office-desktop
+
+# Allow access from multiple IP addresses
+from="192.168.1.100,192.168.1.101,192.168.1.102" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMultiIP alice@office-workstations
+
+# Allow access from IP range (CIDR notation)
+from="10.0.0.0/8" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIInternalNetwork admin@internal
+
+# Allow access from specific hostname
+from="trusted.example.com" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITrustedHost admin@trusted
+
+# Deny specific IP, allow others (negation)
+from="!192.168.1.50,192.168.1.0/24" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBlockOneIP admin@network
+
+# ============================================================================
+# SECURITY RESTRICTIONS
+# ============================================================================
+
+# Disable port forwarding (prevent tunneling)
+no-port-forwarding ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINoTunnel restricted-user@host
+
+# Disable X11 forwarding
+no-X11-forwarding ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINoX11 headless-user@server
+
+# Disable agent forwarding (prevent key theft)
+no-agent-forwarding ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINoAgent untrusted-user@host
+
+# Disable PTY allocation (no interactive shell)
+no-pty ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINoPTY script-only@automation
+
+# Disable all forwarding (maximum restriction)
+restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMaxRestrict highly-restricted@user
+
+# ============================================================================
+# COMBINED RESTRICTIONS
+# ============================================================================
+
+# Backup script from specific IP with no interactive access
+command="/usr/local/bin/backup.sh",no-pty,no-port-forwarding,from="10.0.0.50" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBackupRestricted backup@server
+
+# Monitoring script with comprehensive restrictions
+restrict,command="/usr/local/bin/monitoring.sh",from="192.168.100.0/24" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMonitoring monitoring@service
+
+# Deployment key with source restriction and no forwarding
+from="10.0.1.0/24",no-port-forwarding,no-X11-forwarding,no-agent-forwarding ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDeploy deploy@ci-server
+
+# Emergency access from bastion only
+from="bastion.example.com",command="/bin/bash -l" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEmergency admin@bastion
+
+# ============================================================================
+# ENVIRONMENT VARIABLES
+# ============================================================================
+
+# Set environment variables for the session
+# Note: Requires 'PermitUserEnvironment yes' in sshd_config
+environment="PATH=/usr/local/bin:/usr/bin:/bin" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICustomPath script@automation
+
+# Multiple environment variables
+environment="RAILS_ENV=production",environment="PORT=3000" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIRailsDeploy deploy@rails-app
+
+# ============================================================================
+# CERTIFICATE-BASED (PRINCIPALS)
+# ============================================================================
+
+# When using SSH certificates, principals can be specified
+# These examples assume cert-authority is configured in sshd_config
+
+# cert-authority ssh-rsa AAAAB3NzaC1yc2EAAAAExample Certificate Authority Public Key
+
+# ============================================================================
+# SPECIAL USE CASES
+# ============================================================================
+
+# Forced SFTP access only (chroot environment)
+command="internal-sftp",no-pty,no-port-forwarding,no-X11-forwarding,no-agent-forwarding ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAISFTPOnly sftp-user@client
+
+# Ansible become password passing (with restrictions)
+from="10.0.0.5",no-X11-forwarding,no-agent-forwarding ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAnsibleBecome ansible@tower
+
+# Jenkins build server (restrict to workspace)
+command="cd /var/jenkins && /bin/bash",no-agent-forwarding ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJenkins jenkins@build-server
+
+# Nagios/Icinga monitoring checks
+command="/usr/lib/nagios/plugins/check_disk",no-pty,no-port-forwarding ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINagios nagios@monitoring
+
+# ============================================================================
+# KEY TYPES AND RECOMMENDATIONS
+# ============================================================================
+
+# ED25519 keys (recommended - modern, secure, fast)
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExample user@host
+
+# RSA keys (traditional, widely supported, minimum 3072 bits)
+ssh-rsa AAAAB3NzaC1yc2EAAAAExample user@host
+
+# ECDSA keys (good, but ed25519 preferred)
+ecdsa-sha2-nistp256 AAAAE2VjZHNhExample user@host
+
+# DSA keys (DEPRECATED - do not use)
+# ssh-dss AAAAB3NzaC1kc3MAAACBA... user@host
+
+# ============================================================================
+# NOTES AND BEST PRACTICES
+# ============================================================================
+#
+# File location and permissions:
+#   Location:    ~/.ssh/authorized_keys
+#   File perms:  chmod 600 ~/.ssh/authorized_keys
+#   Dir perms:   chmod 700 ~/.ssh
+#   Owner:       must be owned by the user
+#
+# Key generation recommendations:
+#   Preferred:   ssh-keygen -t ed25519 -C "comment"
+#   RSA:         ssh-keygen -t rsa -b 4096 -C "comment"
+#
+# Security best practices:
+#   1. Use the 'restrict' option as baseline, then add back needed features
+#   2. Always restrict automated/service keys with 'command=' option
+#   3. Use 'from=' to limit source IPs when possible
+#   4. Disable forwarding unless specifically needed
+#   5. Regular audit of authorized keys
+#   6. Remove unused or old keys promptly
+#   7. Use different keys for different purposes
+#   8. Consider SSH certificates for larger deployments
+#
+# Testing:
+#   # Check if key is accepted
+#   ssh-keygen -l -f ~/.ssh/authorized_keys
+#
+#   # Test authentication
+#   ssh -vv user@host
+#
+#   # View effective restrictions
+#   ssh -vv user@host 2>&1 | grep -i restrict
+#
+# Common pitfalls:
+#   - Line breaks in public keys (must be single line)
+#   - Incorrect file permissions
+#   - Wrong file ownership
+#   - SELinux/AppArmor blocking access
+#   - Home directory permissions too open (must be 755 or tighter)
+#
+# Centralized key management:
+#   Instead of per-user files, use:
+#     AuthorizedKeysFile /etc/ssh/authorized_keys/%u
+#   
+#   Benefits:
+#     - Easier audit and management
+#     - Backup and version control
+#     - Consistent across systems
+#     - Supports automation
+#
+# Format:
+#   [restrictions] key-type base64-encoded-key comment
+#
+#   Multiple restrictions are comma-separated (no spaces):
+#   from="host1",no-pty,command="/script" ssh-ed25519 AAA... comment
+#
+# Modern approach (OpenSSH 7.2+):
+#   Use 'restrict' as baseline, then explicitly permit features:
+#   restrict,pty,port-forwarding ssh-ed25519 AAA... user@host

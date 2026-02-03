@@ -1,0 +1,255 @@
+# ssh_config.example
+# SSH client configuration with jump hosts and best practices
+#
+# Copy to: ~/.ssh/config (user-specific)
+#       or: /etc/ssh/ssh_config (system-wide)
+#
+# Permissions: chmod 600 ~/.ssh/config
+#
+# Compatible with OpenSSH 7.3+ (Ubuntu 18.04+)
+
+# ============================================================================
+# GLOBAL DEFAULTS
+# ============================================================================
+
+# Apply these settings to all hosts unless overridden
+Host *
+    # Keep connections alive (prevent timeouts)
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+    
+    # Connection timeout
+    ConnectTimeout 10
+    
+    # Reuse connections for speed (multiplexing)
+    ControlMaster auto
+    ControlPath ~/.ssh/sockets/%r@%h:%p
+    ControlPersist 10m
+    
+    # Use modern key exchange algorithms
+    KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256
+    
+    # Prefer public key authentication
+    PreferredAuthentications publickey,keyboard-interactive,password
+    
+    # Hash known hosts for privacy
+    HashKnownHosts yes
+    
+    # Check host key against known_hosts
+    StrictHostKeyChecking ask
+    
+    # Forward agent (be cautious - security risk on untrusted hosts)
+    ForwardAgent no
+    
+    # Compression (useful on slow connections)
+    Compression yes
+    
+    # Use system-wide known hosts
+    GlobalKnownHostsFile /etc/ssh/ssh_known_hosts
+    UserKnownHostsFile ~/.ssh/known_hosts
+
+# ============================================================================
+# JUMP HOST / BASTION CONFIGURATION
+# ============================================================================
+
+# Bastion host definition
+Host bastion
+    HostName bastion.example.com
+    User jump-user
+    Port 22
+    IdentityFile ~/.ssh/id_ed25519_bastion
+    ForwardAgent no
+    # Don't apply multiplexing to bastion itself
+    ControlMaster no
+
+# Internal server accessed through bastion (ProxyJump method)
+Host internal-server
+    HostName 10.0.1.50
+    User admin
+    Port 22
+    ProxyJump bastion
+    IdentityFile ~/.ssh/id_ed25519
+
+# Alternative: Multiple jump hosts
+Host deep-internal
+    HostName 10.0.5.100
+    User admin
+    ProxyJump bastion,internal-server
+
+# Legacy ProxyCommand method (for older OpenSSH versions)
+Host legacy-internal
+    HostName 10.0.2.100
+    User admin
+    ProxyCommand ssh -W %h:%p bastion
+
+# ============================================================================
+# SPECIFIC HOST CONFIGURATIONS
+# ============================================================================
+
+# Production web server
+Host webserver web
+    HostName web.example.com
+    User deploy
+    Port 2222
+    IdentityFile ~/.ssh/id_ed25519_web
+    ForwardAgent no
+    # Log connection details
+    LogLevel VERBOSE
+
+# Database server (non-standard port)
+Host dbserver db
+    HostName db.example.com
+    User dbadmin
+    Port 3322
+    IdentityFile ~/.ssh/id_rsa_db
+    # No compression for database traffic
+    Compression no
+    # Longer timeout for database operations
+    ServerAliveInterval 120
+
+# Development server (more relaxed settings)
+Host dev devserver
+    HostName dev.example.com
+    User developer
+    Port 22
+    IdentityFile ~/.ssh/id_ed25519
+    ForwardAgent yes
+    # X11 forwarding for GUI apps
+    ForwardX11 yes
+    ForwardX11Trusted yes
+
+# ============================================================================
+# WILDCARD CONFIGURATIONS
+# ============================================================================
+
+# All servers in example.com domain
+Host *.example.com
+    User admin
+    Port 22
+    IdentityFile ~/.ssh/id_ed25519
+    # Trust known hosts in corporate domain
+    StrictHostKeyChecking yes
+
+# All development machines
+Host dev-*
+    User developer
+    Port 22
+    IdentityFile ~/.ssh/id_ed25519_dev
+    ForwardAgent yes
+    # Less strict checking for dev environments
+    StrictHostKeyChecking accept-new
+
+# All production machines
+Host prod-*
+    User deploy
+    Port 22
+    IdentityFile ~/.ssh/id_ed25519_prod
+    ForwardAgent no
+    # Strict checking for production
+    StrictHostKeyChecking yes
+
+# ============================================================================
+# PORT FORWARDING EXAMPLES
+# ============================================================================
+
+# Local port forwarding (access remote service locally)
+# Usage: ssh tunnel-web
+# Then access: http://localhost:8080
+Host tunnel-web
+    HostName web.example.com
+    User admin
+    LocalForward 8080 localhost:80
+    IdentityFile ~/.ssh/id_ed25519
+
+# Remote port forwarding (expose local service remotely)
+Host tunnel-reverse
+    HostName remote.example.com
+    User admin
+    RemoteForward 9000 localhost:3000
+    IdentityFile ~/.ssh/id_ed25519
+
+# Dynamic port forwarding (SOCKS proxy)
+# Usage: ssh socks-proxy
+# Configure browser to use SOCKS5 proxy localhost:1080
+Host socks-proxy
+    HostName proxy.example.com
+    User admin
+    DynamicForward 1080
+    IdentityFile ~/.ssh/id_ed25519
+
+# ============================================================================
+# SPECIAL USE CASES
+# ============================================================================
+
+# Git server (GitHub-style)
+Host git.example.com
+    User git
+    Port 22
+    IdentityFile ~/.ssh/id_ed25519_git
+    # Git doesn't need interactive sessions
+    RequestTTY no
+
+# Ansible control host
+Host ansible-control
+    HostName control.example.com
+    User ansible
+    Port 22
+    IdentityFile ~/.ssh/id_ed25519_ansible
+    # Forward agent for Ansible to reach managed hosts
+    ForwardAgent yes
+    # Keep sessions alive during long playbooks
+    ServerAliveInterval 30
+
+# Emergency access (relaxed settings for recovery)
+Host emergency-*
+    # Skip strict checking in emergencies
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+    LogLevel ERROR
+
+# ============================================================================
+# AWS EC2 INSTANCES
+# ============================================================================
+
+# EC2 instances typically use specific keys and usernames
+Host *.compute.amazonaws.com
+    User ubuntu
+    IdentityFile ~/.ssh/aws-key.pem
+    StrictHostKeyChecking accept-new
+
+Host ec2-*
+    User ec2-user
+    IdentityFile ~/.ssh/aws-key.pem
+
+# ============================================================================
+# NOTES
+# ============================================================================
+#
+# Connection multiplexing:
+#   First create the control socket directory:
+#     mkdir -p ~/.ssh/sockets
+#     chmod 700 ~/.ssh/sockets
+#
+# Usage shortcuts:
+#   Instead of: ssh -p 2222 deploy@web.example.com
+#   Just use:   ssh webserver
+#
+# Test configuration:
+#   ssh -G hostname    # Show effective configuration
+#   ssh -v hostname    # Verbose connection output
+#
+# Security notes:
+#   - Never enable ForwardAgent on untrusted hosts
+#   - Use different keys for different purposes
+#   - Keep private keys encrypted with strong passphrases
+#   - Regularly audit and rotate keys
+#   - Use SSH certificates for larger deployments
+#
+# ProxyJump vs ProxyCommand:
+#   - ProxyJump: modern, simpler syntax (OpenSSH 7.3+)
+#   - ProxyCommand: older method, more flexible, works everywhere
+#
+# Order matters:
+#   - First matching Host directive wins for each option
+#   - More specific hosts should appear before wildcards
+#   - Host * should be at the top for global defaults
