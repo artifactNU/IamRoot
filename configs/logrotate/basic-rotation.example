@@ -1,0 +1,229 @@
+# basic-rotation.example
+# Simple daily log rotation with compression
+#
+# Copy to: /etc/logrotate.d/myapp
+# Test:    logrotate -d /etc/logrotate.d/myapp
+# Force:   logrotate -f /etc/logrotate.d/myapp
+#
+# This is the most common logrotate pattern - daily rotation with compression
+# Compatible with logrotate 3.8+ (Ubuntu 18.04+)
+
+# ============================================================================
+# BASIC DAILY ROTATION
+# ============================================================================
+
+# Specify the log file(s) to rotate
+# Can use absolute paths or wildcards
+/var/log/myapp/myapp.log {
+    
+    # Rotate daily (other options: hourly, weekly, monthly, yearly)
+    daily
+    
+    # Keep 14 rotated logs (14 days worth)
+    # Old logs beyond this count are deleted
+    rotate 14
+    
+    # Compress rotated logs (saves disk space)
+    # Creates .gz files
+    compress
+    
+    # Don't compress the most recent rotated log
+    # Useful for debugging recent issues
+    # The file is compressed on the next rotation
+    delaycompress
+    
+    # Don't error if the log file is missing
+    # Useful if application isn't always running
+    missingok
+    
+    # Don't rotate if log file is empty
+    # Prevents cluttering with empty rotated logs
+    notifempty
+    
+    # Create new log file after rotation
+    # Syntax: create mode owner group
+    # Common modes: 0640 (rw-r-----), 0644 (rw-r--r--), 0600 (rw-------)
+    create 0640 myapp adm
+    
+    # Run commands after rotation (optional)
+    # Use this to notify the application that log was rotated
+    postrotate
+        # Reload application to reopen log file
+        # systemctl reload myapp > /dev/null 2>&1 || true
+        
+        # Or send a signal to the process
+        # killall -SIGUSR1 myapp 2>/dev/null || true
+        
+        # Or use this for apps that automatically detect rotation
+        # No action needed if app handles rotation itself
+    endscript
+    
+    # Run scripts once for all logs (if rotating multiple files)
+    # Instead of once per file
+    sharedscripts
+}
+
+# ============================================================================
+# WHAT THIS CONFIGURATION DOES
+# ============================================================================
+#
+# Day 0 (today):
+#   /var/log/myapp/myapp.log          (current log, growing)
+#
+# Day 1 (after first rotation):
+#   /var/log/myapp/myapp.log          (new empty file)
+#   /var/log/myapp/myapp.log.1        (yesterday's log, uncompressed)
+#
+# Day 2 (after second rotation):
+#   /var/log/myapp/myapp.log          (new empty file)
+#   /var/log/myapp/myapp.log.1        (yesterday's log, uncompressed)
+#   /var/log/myapp/myapp.log.2.gz     (2 days ago, compressed)
+#
+# Day 14 (steady state):
+#   /var/log/myapp/myapp.log          (current)
+#   /var/log/myapp/myapp.log.1        (1 day old, uncompressed)
+#   /var/log/myapp/myapp.log.2.gz     (2 days old, compressed)
+#   ...
+#   /var/log/myapp/myapp.log.14.gz    (14 days old, compressed)
+#
+# Day 15:
+#   myapp.log.14.gz is deleted
+#   New rotation creates myapp.log.1
+#
+# ============================================================================
+# COMMON VARIATIONS
+# ============================================================================
+#
+# Keep 7 days (one week):
+#   rotate 7
+#
+# Keep 30 days (one month):
+#   rotate 30
+#
+# Keep 90 days (three months):
+#   rotate 90
+#
+# No compression (faster, uses more disk):
+#   # Remove or comment out these lines:
+#   # compress
+#   # delaycompress
+#
+# Compress immediately:
+#   compress
+#   # Remove: delaycompress
+#
+# Different compression:
+#   compresscmd /usr/bin/bzip2
+#   compressext .bz2
+#   uncompresscmd /usr/bin/bunzip2
+#
+# ============================================================================
+# TESTING
+# ============================================================================
+#
+# Test configuration (dry run):
+#   sudo logrotate -d /etc/logrotate.d/myapp
+#
+# Force rotation (for testing):
+#   sudo logrotate -f /etc/logrotate.d/myapp
+#
+# Check what logrotate would do:
+#   sudo logrotate -dv /etc/logrotate.d/myapp
+#
+# View logrotate status (last rotation time):
+#   cat /var/lib/logrotate/status | grep myapp
+#
+# Manual test sequence:
+#   1. Create test log: echo "test" > /var/log/myapp/myapp.log
+#   2. Run rotation:    sudo logrotate -f /etc/logrotate.d/myapp
+#   3. Check results:   ls -lh /var/log/myapp/
+#
+# ============================================================================
+# TROUBLESHOOTING
+# ============================================================================
+#
+# Logs not rotating:
+#   - Check logrotate is running: grep logrotate /var/log/syslog
+#   - Check cron: ls -l /etc/cron.daily/logrotate
+#   - Verify syntax: logrotate -d /etc/logrotate.d/myapp
+#   - Check permissions: ls -l /var/log/myapp/
+#
+# Permission denied errors:
+#   - Ensure logrotate runs as root (normally via cron)
+#   - Check log directory permissions
+#   - Verify create directive has correct user/group
+#
+# Application stops logging after rotation:
+#   - Add postrotate script to notify application
+#   - Or configure application to handle SIGHUP
+#   - Or use copytruncate (see below)
+#
+# Using copytruncate (alternative approach):
+#   # Instead of moving log file, copy and truncate
+#   # Useful for apps that don't handle log rotation
+#   copytruncate
+#   # Remove: create directive
+#   # Warning: Small time window where logs could be lost
+#
+# ============================================================================
+# EXAMPLE: Web Server Logs
+# ============================================================================
+#
+# /var/log/nginx/access.log {
+#     daily
+#     rotate 14
+#     compress
+#     delaycompress
+#     missingok
+#     notifempty
+#     create 0640 www-data adm
+#     sharedscripts
+#     postrotate
+#         systemctl reload nginx > /dev/null 2>&1 || true
+#     endscript
+# }
+#
+# ============================================================================
+# EXAMPLE: Application Logs
+# ============================================================================
+#
+# /var/log/myapp/*.log {
+#     daily
+#     rotate 30
+#     compress
+#     delaycompress
+#     missingok
+#     notifempty
+#     create 0640 myapp myapp
+#     sharedscripts
+#     postrotate
+#         systemctl reload myapp > /dev/null 2>&1 || true
+#     endscript
+# }
+#
+# ============================================================================
+# NOTES
+# ============================================================================
+#
+# Logrotate runs daily via cron (/etc/cron.daily/logrotate)
+#
+# Default behavior without directives:
+#   - No compression
+#   - Rotate weekly
+#   - Keep 4 rotated logs
+#   - Create new file with same permissions as old
+#   - Error if log is missing
+#
+# Best practices:
+#   - Always use missingok (prevents errors)
+#   - Always use notifempty (saves disk space)
+#   - Use create with explicit permissions
+#   - Use sharedscripts with postrotate
+#   - Test before deploying: logrotate -d
+#
+# File naming:
+#   - Drop in /etc/logrotate.d/ with any name
+#   - No .conf extension needed
+#   - Processed alphabetically
+#   - Files must not be executable
+#   - Files must not have extensions (no .conf, .bak, ~)

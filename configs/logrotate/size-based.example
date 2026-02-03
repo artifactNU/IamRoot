@@ -1,0 +1,379 @@
+# size-based.example
+# Size-based log rotation examples
+#
+# Copy to: /etc/logrotate.d/myapp
+# Test:    logrotate -d /etc/logrotate.d/myapp
+# Force:   logrotate -f /etc/logrotate.d/myapp
+#
+# Use size-based rotation when logs grow unpredictably or very quickly
+# Compatible with logrotate 3.8+ (Ubuntu 18.04+)
+
+# ============================================================================
+# BASIC SIZE-BASED ROTATION
+# ============================================================================
+
+# Rotate when log reaches 100MB (regardless of time)
+/var/log/myapp/application.log {
+    # Rotate when file reaches this size
+    size 100M
+    
+    # Keep 10 rotated logs
+    rotate 10
+    
+    # Compress rotated logs
+    compress
+    delaycompress
+    
+    missingok
+    notifempty
+    create 0640 myapp adm
+    
+    postrotate
+        systemctl reload myapp > /dev/null 2>&1 || true
+    endscript
+}
+
+# ============================================================================
+# SIZE + TIME BASED (WHICHEVER COMES FIRST)
+# ============================================================================
+
+# Rotate daily OR when reaching 50MB (whichever happens first)
+/var/log/myapp/access.log {
+    daily
+    size 50M               # Also rotate if reaches 50MB before daily rotation
+    rotate 7
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 myapp adm
+    postrotate
+        systemctl reload myapp > /dev/null 2>&1 || true
+    endscript
+}
+
+# ============================================================================
+# HIGH-VOLUME LOGS (LARGE SIZE THRESHOLD)
+# ============================================================================
+
+# Large logs - rotate only when reaching 1GB
+/var/log/myapp/analytics.log {
+    size 1G
+    rotate 5               # Keep 5 rotations = 5GB max
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 myapp adm
+    # Compress immediately to save space
+    nodelaycompress
+    postrotate
+        systemctl reload myapp > /dev/null 2>&1 || true
+    endscript
+}
+
+# ============================================================================
+# MINIMUM SIZE (WITH TIME-BASED)
+# ============================================================================
+
+# Rotate daily, but only if file is at least 10MB
+# Prevents creating tiny rotated files
+/var/log/myapp/events.log {
+    daily
+    minsize 10M            # Don't rotate unless at least 10MB
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 myapp adm
+    postrotate
+        systemctl reload myapp > /dev/null 2>&1 || true
+    endscript
+}
+
+# ============================================================================
+# MAXIMUM SIZE (EMERGENCY ROTATION)
+# ============================================================================
+
+# Rotate weekly, but force rotation if exceeds 500MB
+# Prevents disk filling between scheduled rotations
+/var/log/myapp/batch.log {
+    weekly
+    maxsize 500M           # Force rotation if exceeds this size
+    rotate 4
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 myapp adm
+    postrotate
+        systemctl reload myapp > /dev/null 2>&1 || true
+    endscript
+}
+
+# ============================================================================
+# COMBINED: MIN, MAX, AND TIME
+# ============================================================================
+
+# Sophisticated rotation policy:
+# - Rotate weekly
+# - But only if at least 5MB (minsize)
+# - Force rotation if reaches 100MB (maxsize)
+/var/log/myapp/hybrid.log {
+    weekly
+    minsize 5M             # Minimum size to rotate
+    maxsize 100M           # Maximum size before forced rotation
+    rotate 12              # Keep ~3 months of weekly logs
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 myapp adm
+    postrotate
+        systemctl reload myapp > /dev/null 2>&1 || true
+    endscript
+}
+
+# ============================================================================
+# VERY FAST-GROWING LOGS
+# ============================================================================
+
+# Logs that grow extremely fast - multiple rotations per day possible
+/var/log/myapp/debug.log {
+    # No time-based rotation, purely size-based
+    size 10M               # Rotate every 10MB
+    rotate 50              # Keep many rotations (500MB total)
+    compress
+    nodelaycompress        # Compress immediately
+    missingok
+    notifempty
+    create 0640 myapp adm
+    # Use copytruncate for high-frequency rotation
+    copytruncate
+}
+
+# ============================================================================
+# SIZE SPECIFICATIONS
+# ============================================================================
+#
+# Supported size formats:
+#   size 100k      # 100 kilobytes
+#   size 100K      # 100 kilobytes
+#   size 100M      # 100 megabytes
+#   size 100G      # 100 gigabytes
+#   size 100       # 100 bytes (rarely used)
+#
+# Examples:
+#   size 1M        # 1 megabyte
+#   size 10M       # 10 megabytes
+#   size 100M      # 100 megabytes
+#   size 1G        # 1 gigabyte
+#   size 500k      # 500 kilobytes
+#
+# ============================================================================
+# SIZE VS TIME: CHOOSING THE RIGHT STRATEGY
+# ============================================================================
+#
+# Use SIZE-ONLY when:
+#   - Log volume varies unpredictably
+#   - Application has burst periods
+#   - Consistent file size more important than retention period
+#   - Example: Debug logs during development
+#
+# Use TIME-ONLY when:
+#   - Log volume is predictable
+#   - Retention period is regulatory requirement
+#   - Easier to manage archive by date
+#   - Example: Audit logs
+#
+# Use SIZE + TIME when:
+#   - Need both retention period and size control
+#   - Prevent disk filling (size as safety net)
+#   - Example: Application logs
+#
+# Use MINSIZE + TIME when:
+#   - Don't want tiny rotated files
+#   - Log volume varies (sometimes very low)
+#   - Example: Error logs (low frequency)
+#
+# Use MAXSIZE + TIME when:
+#   - Need periodic rotation (time-based)
+#   - But also prevent disk filling (size limit)
+#   - Example: Access logs (usually predictable, but can burst)
+#
+# ============================================================================
+# REAL-WORLD EXAMPLE: WEB SERVER
+# ============================================================================
+#
+# High-traffic web server with unpredictable load:
+#
+# /var/log/nginx/access.log {
+#     daily
+#     maxsize 1G             # Force rotation if reaches 1GB before daily
+#     rotate 14
+#     compress
+#     delaycompress
+#     missingok
+#     notifempty
+#     create 0640 www-data adm
+#     sharedscripts
+#     postrotate
+#         systemctl reload nginx > /dev/null 2>&1 || true
+#     endscript
+# }
+#
+# /var/log/nginx/error.log {
+#     weekly
+#     minsize 10M            # Only rotate if at least 10MB
+#     rotate 12
+#     compress
+#     delaycompress
+#     missingok
+#     notifempty
+#     create 0640 www-data adm
+#     sharedscripts
+#     postrotate
+#         systemctl reload nginx > /dev/null 2>&1 || true
+#     endscript
+# }
+#
+# ============================================================================
+# REAL-WORLD EXAMPLE: DATABASE
+# ============================================================================
+#
+# Database with varying query load:
+#
+# /var/log/postgresql/postgresql.log {
+#     size 100M              # Pure size-based rotation
+#     rotate 20              # Keep up to 2GB of logs
+#     compress
+#     delaycompress
+#     missingok
+#     notifempty
+#     create 0640 postgres postgres
+#     postrotate
+#         # PostgreSQL handles log rotation internally
+#         # No reload needed
+#     endscript
+# }
+#
+# ============================================================================
+# REAL-WORLD EXAMPLE: BATCH PROCESSING
+# ============================================================================
+#
+# Application that runs periodic batch jobs:
+#
+# /var/log/batch-processor/output.log {
+#     # Rotate after each batch run (triggered by size)
+#     size 50M
+#     rotate 100             # Keep last 100 runs
+#     compress
+#     nodelaycompress
+#     missingok
+#     notifempty
+#     create 0640 batch batch
+#     # Copy and truncate - don't interrupt running batch
+#     copytruncate
+# }
+#
+# ============================================================================
+# CALCULATING DISK USAGE
+# ============================================================================
+#
+# Uncompressed:
+#   size * rotate = total disk usage
+#   Example: 100M * 10 = 1GB
+#
+# Compressed (approximate, depends on content):
+#   size * rotate * compression_ratio
+#   Text logs typically compress to 10-20% of original
+#   Example: 100M * 10 * 0.15 = 150MB
+#
+# Planning storage:
+#   1. Measure current daily log size
+#   2. Decide retention period (e.g., 30 days)
+#   3. Calculate: daily_size * retention_days * safety_margin
+#   4. Example: 50MB/day * 30 days * 1.5 = 2.25GB
+#
+# ============================================================================
+# MONITORING SIZE-BASED ROTATION
+# ============================================================================
+#
+# Check current log sizes:
+#   du -sh /var/log/myapp/*.log
+#
+# Monitor size over time:
+#   watch -n 60 'du -sh /var/log/myapp/application.log'
+#
+# Find logs approaching rotation size:
+#   find /var/log -type f -size +80M -exec ls -lh {} \;
+#
+# Check rotation history:
+#   ls -lht /var/log/myapp/ | head -20
+#
+# Verify compression ratios:
+#   ls -lh /var/log/myapp/application.log.*
+#
+# ============================================================================
+# TESTING SIZE-BASED ROTATION
+# ============================================================================
+#
+# Create test log file:
+#   dd if=/dev/zero of=/var/log/myapp/test.log bs=1M count=150
+#
+# Force rotation:
+#   sudo logrotate -f /etc/logrotate.d/myapp
+#
+# Verify size-based trigger:
+#   # Edit config, reduce size to 1M for testing
+#   # Create 2M file
+#   # Run logrotate
+#   # Should rotate even though not daily yet
+#
+# Check logrotate status:
+#   cat /var/lib/logrotate/status | grep myapp
+#
+# ============================================================================
+# TROUBLESHOOTING
+# ============================================================================
+#
+# Log not rotating despite exceeding size:
+#   - Logrotate runs from cron (/etc/cron.daily/)
+#   - Check if logrotate ran recently: ls -l /var/lib/logrotate/status
+#   - Force rotation to test: logrotate -f /etc/logrotate.d/myapp
+#   - Check for errors: logrotate -d /etc/logrotate.d/myapp
+#
+# Disk filling up between rotations:
+#   - Add maxsize directive as safety net
+#   - Reduce rotation size threshold
+#   - Consider more aggressive compression
+#   - Monitor disk usage alerts
+#
+# Size calculation seems wrong:
+#   - Size is checked when logrotate runs (typically daily)
+#   - If log grows 150MB in one day and size=100M, might not rotate until next run
+#   - Solution: Run logrotate more frequently or use copytruncate
+#
+# ============================================================================
+# BEST PRACTICES
+# ============================================================================
+#
+# 1. Always combine with time-based as safety net:
+#    daily
+#    maxsize 500M
+#
+# 2. Calculate total disk usage:
+#    Ensure rotate * size fits available space
+#
+# 3. Monitor actual log growth:
+#    Adjust size thresholds based on real data
+#
+# 4. Use appropriate compression:
+#    Balance CPU usage vs disk space
+#
+# 5. Set up disk space alerts:
+#    Don't rely on rotation alone
+#
+# 6. Document why specific size chosen:
+#    Help future you understand the decision

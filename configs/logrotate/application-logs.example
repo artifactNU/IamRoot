@@ -1,0 +1,368 @@
+# application-logs.example
+# Multi-file rotation pattern for application with multiple log types
+#
+# Copy to: /etc/logrotate.d/myapp
+# Test:    logrotate -d /etc/logrotate.d/myapp
+# Force:   logrotate -f /etc/logrotate.d/myapp
+#
+# This example shows how to rotate multiple log files with different policies
+# Compatible with logrotate 3.8+ (Ubuntu 18.04+)
+
+# ============================================================================
+# PATTERN 1: ALL APPLICATION LOGS (WILDCARD)
+# ============================================================================
+
+# Rotate all log files in application directory
+# Good for applications that create multiple log files
+/var/log/myapp/*.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 myapp adm
+    sharedscripts
+    postrotate
+        # Reload application once for all logs
+        systemctl reload myapp > /dev/null 2>&1 || true
+    endscript
+}
+
+# ============================================================================
+# PATTERN 2: SPECIFIC LOG FILES WITH DIFFERENT POLICIES
+# ============================================================================
+
+# Main application log - keep longer
+/var/log/myapp/application.log {
+    daily
+    rotate 30              # Keep 30 days
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 myapp adm
+    postrotate
+        systemctl reload myapp > /dev/null 2>&1 || true
+    endscript
+}
+
+# Error log - keep even longer for troubleshooting
+/var/log/myapp/error.log {
+    daily
+    rotate 90              # Keep 90 days (3 months)
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 myapp adm
+    # Don't rotate if empty (errors are rare)
+    notifempty
+    postrotate
+        systemctl reload myapp > /dev/null 2>&1 || true
+    endscript
+}
+
+# Access log - large volume, rotate more frequently
+/var/log/myapp/access.log {
+    daily
+    rotate 7               # Keep only 7 days
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 myapp adm
+    # Size-based rotation as well (whichever comes first)
+    size 100M
+    postrotate
+        systemctl reload myapp > /dev/null 2>&1 || true
+    endscript
+}
+
+# Debug log - rotate hourly due to volume
+/var/log/myapp/debug.log {
+    hourly
+    rotate 24              # Keep 24 hours
+    compress
+    # Compress immediately (don't delay)
+    nodelaycompress
+    missingok
+    notifempty
+    create 0640 myapp adm
+    # Size limit to prevent filling disk
+    size 50M
+    # Truncate immediately if over 500M (emergency)
+    maxsize 500M
+}
+
+# ============================================================================
+# PATTERN 3: MULTIPLE LOGS IN ONE BLOCK
+# ============================================================================
+
+# Group related logs with same policy
+/var/log/myapp/app.log /var/log/myapp/worker.log /var/log/myapp/scheduler.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 myapp adm
+    sharedscripts          # Run postrotate once for all three files
+    postrotate
+        systemctl reload myapp > /dev/null 2>&1 || true
+    endscript
+}
+
+# ============================================================================
+# PATTERN 4: LOGS WITH DIFFERENT EXTENSIONS
+# ============================================================================
+
+# Application that creates .log and .json log files
+/var/log/myapp/*.{log,json} {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 myapp adm
+    # Use custom extension for rotated files
+    extension .log
+    sharedscripts
+    postrotate
+        systemctl reload myapp > /dev/null 2>&1 || true
+    endscript
+}
+
+# ============================================================================
+# PATTERN 5: NESTED DIRECTORY STRUCTURE
+# ============================================================================
+
+# Application with logs in subdirectories
+# This won't recurse into subdirectories automatically
+/var/log/myapp/*/*.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 myapp adm
+    sharedscripts
+    postrotate
+        systemctl reload myapp > /dev/null 2>&1 || true
+    endscript
+}
+
+# ============================================================================
+# PATTERN 6: LOGS THAT NEED SPECIAL HANDLING
+# ============================================================================
+
+# Log file that application keeps open (can't move file)
+/var/log/myapp/persistent.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    # Copy and truncate instead of move
+    # Use this when application doesn't support log rotation signals
+    copytruncate
+    # Note: Don't use 'create' with copytruncate
+    # Warning: Brief moment where log entries could be lost
+}
+
+# ============================================================================
+# REAL-WORLD EXAMPLE: WEB APPLICATION
+# ============================================================================
+#
+# Typical web app with multiple log types:
+#
+# /var/log/webapp/access.log {
+#     daily
+#     rotate 7
+#     compress
+#     delaycompress
+#     missingok
+#     notifempty
+#     create 0644 www-data adm
+#     size 100M
+#     sharedscripts
+#     postrotate
+#         systemctl reload nginx > /dev/null 2>&1 || true
+#     endscript
+# }
+#
+# /var/log/webapp/error.log {
+#     daily
+#     rotate 30
+#     compress
+#     delaycompress
+#     missingok
+#     notifempty
+#     create 0644 www-data adm
+#     sharedscripts
+#     postrotate
+#         systemctl reload nginx > /dev/null 2>&1 || true
+#     endscript
+# }
+#
+# /var/log/webapp/application.log {
+#     daily
+#     rotate 14
+#     compress
+#     delaycompress
+#     missingok
+#     notifempty
+#     create 0644 webapp webapp
+#     sharedscripts
+#     postrotate
+#         systemctl reload webapp > /dev/null 2>&1 || true
+#     endscript
+# }
+#
+# ============================================================================
+# REAL-WORLD EXAMPLE: MICROSERVICES
+# ============================================================================
+#
+# Multiple services, each with its own logs:
+#
+# /var/log/api-gateway/*.log {
+#     daily
+#     rotate 14
+#     compress
+#     delaycompress
+#     missingok
+#     notifempty
+#     create 0640 api-gateway adm
+#     sharedscripts
+#     postrotate
+#         systemctl reload api-gateway > /dev/null 2>&1 || true
+#     endscript
+# }
+#
+# /var/log/auth-service/*.log {
+#     daily
+#     rotate 90    # Keep auth logs longer for security
+#     compress
+#     delaycompress
+#     missingok
+#     notifempty
+#     create 0640 auth-service adm
+#     sharedscripts
+#     postrotate
+#         systemctl reload auth-service > /dev/null 2>&1 || true
+#     endscript
+# }
+#
+# /var/log/payment-service/*.log {
+#     daily
+#     rotate 365   # Keep payment logs for a year (compliance)
+#     compress
+#     nodelaycompress
+#     missingok
+#     notifempty
+#     create 0600 payment-service payment-service  # Stricter permissions
+#     sharedscripts
+#     postrotate
+#         systemctl reload payment-service > /dev/null 2>&1 || true
+#     endscript
+# }
+#
+# ============================================================================
+# ADVANCED PATTERNS
+# ============================================================================
+#
+# Date-based naming:
+#   dateext                # Use date instead of numbers (myapp-20260203.log)
+#   dateformat -%Y%m%d    # Custom date format
+#
+# Keep rotated logs in different directory:
+#   olddir /var/log/myapp/archive
+#   createolddir 0755 myapp adm  # Create if doesn't exist
+#
+# Email logs before deletion:
+#   mail admin@example.com
+#   mailfirst              # Mail the oldest log about to be deleted
+#
+# Different compression:
+#   compresscmd /usr/bin/bzip2
+#   compressext .bz2
+#   uncompresscmd /usr/bin/bunzip2
+#
+# Conditional rotation:
+#   minsize 10M            # Rotate only if larger than 10M
+#   maxsize 100M           # Force rotation if larger than 100M
+#
+# Start numbering from 0:
+#   start 0                # myapp.log.0 instead of myapp.log.1
+#
+# ============================================================================
+# TESTING MULTI-FILE CONFIGURATIONS
+# ============================================================================
+#
+# Test entire configuration:
+#   sudo logrotate -d /etc/logrotate.d/myapp
+#
+# Test and show details:
+#   sudo logrotate -dv /etc/logrotate.d/myapp
+#
+# Force rotation of all logs:
+#   sudo logrotate -f /etc/logrotate.d/myapp
+#
+# Check which files would be rotated:
+#   sudo logrotate -d /etc/logrotate.d/myapp 2>&1 | grep "rotating"
+#
+# Verify wildcard expansion:
+#   ls -l /var/log/myapp/*.log
+#
+# ============================================================================
+# COMMON PITFALLS
+# ============================================================================
+#
+# 1. Wildcard matches more than intended:
+#    /var/log/*.log might match system logs too
+#    Solution: Be specific: /var/log/myapp/*.log
+#
+# 2. Multiple configurations for same file:
+#    If file matches multiple patterns, behavior is undefined
+#    Solution: Make patterns mutually exclusive
+#
+# 3. Postrotate runs for each file:
+#    Without sharedscripts, postrotate runs multiple times
+#    Solution: Always use sharedscripts with postrotate
+#
+# 4. Application stops logging:
+#    App doesn't receive reload signal or can't handle it
+#    Solution: Use copytruncate or fix app signal handling
+#
+# 5. Disk fills up between rotations:
+#    Large logs grow too fast
+#    Solution: Add size directive for emergency rotation
+#
+# ============================================================================
+# BEST PRACTICES
+# ============================================================================
+#
+# 1. Group logs by retention requirements:
+#    - Debug logs: short retention
+#    - Error logs: medium retention
+#    - Audit logs: long retention
+#
+# 2. Use size limits as safety net:
+#    Even with daily rotation, add size limit
+#
+# 3. Test thoroughly:
+#    Use -d flag before deploying
+#    Force rotation to verify postrotate works
+#
+# 4. Monitor disk space:
+#    Set up alerts for /var/log usage
+#
+# 5. Consider compliance:
+#    Security/audit logs may have regulatory retention requirements
+#
+# 6. Document retention policies:
+#    Comment why each log has specific retention period
