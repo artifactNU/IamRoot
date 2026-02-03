@@ -1,0 +1,275 @@
+# service-with-restart.service.example
+# Systemd service with automatic restart and failure handling
+#
+# Copy to: /etc/systemd/system/myservice.service
+# Reload:  systemctl daemon-reload
+# Enable:  systemctl enable myservice.service
+# Start:   systemctl start myservice.service
+#
+# This example shows production-ready restart policies
+# Compatible with systemd 245+ (Ubuntu 20.04+)
+
+[Unit]
+Description=Production Application with Restart Policy
+Documentation=https://example.com/docs
+
+# Network dependency
+After=network-online.target
+Wants=network-online.target
+
+# Database dependency (optional)
+#After=postgresql.service
+#Wants=postgresql.service
+
+[Service]
+# Application command
+ExecStart=/usr/local/bin/myapp --config /etc/myapp/config.yml
+
+# Preflight check (optional but recommended)
+# Validate config before starting
+ExecStartPre=/usr/local/bin/myapp --validate-config
+# Ensure runtime directory exists
+ExecStartPre=/bin/mkdir -p /var/run/myapp
+ExecStartPre=/bin/chown myapp:myapp /var/run/myapp
+
+# Graceful shutdown (optional)
+# Send SIGTERM, wait, then SIGKILL
+ExecStop=/bin/kill -TERM $MAINPID
+# Cleanup after stop
+ExecStopPost=/bin/rm -f /var/run/myapp/myapp.pid
+
+# User and group
+User=myapp
+Group=myapp
+
+# Working directory
+WorkingDirectory=/var/lib/myapp
+
+# Service type
+Type=simple
+
+# ============================================================================
+# RESTART POLICY
+# ============================================================================
+
+# When to restart the service
+# no:          Never restart (default)
+# always:      Always restart regardless of exit status
+# on-success:  Restart only on clean exit (exit code 0)
+# on-failure:  Restart only on failure (non-zero exit, signal, timeout)
+# on-abnormal: Restart on unclean signal or timeout
+# on-abort:    Restart only on unclean signal
+# on-watchdog: Restart only on watchdog timeout
+Restart=on-failure
+
+# How long to wait before restarting (seconds)
+# Prevents rapid restart loops
+RestartSec=10s
+
+# ============================================================================
+# RESTART RATE LIMITING
+# ============================================================================
+
+# Maximum restart attempts in a time window
+# If StartLimitBurst restarts happen within StartLimitIntervalSec,
+# the service enters failed state and won't restart automatically
+
+# Time window for counting restart attempts (default: 10s)
+# Set to 0 to disable rate limiting
+StartLimitIntervalSec=200s
+
+# Maximum restarts allowed in the interval (default: 5)
+StartLimitBurst=5
+
+# What to do when rate limit is hit
+# none:     Just fail (default)
+# reboot:   Reboot the system
+# reboot-force: Force immediate reboot
+# reboot-immediate: Reboot without shutdown
+# poweroff: Power off the system
+# exit:     Exit service manager (systemd itself)
+#StartLimitAction=none
+
+# ============================================================================
+# PROCESS CONTROL
+# ============================================================================
+
+# Timeout for start operation
+# Service must start within this time or it's considered failed
+TimeoutStartSec=60s
+
+# Timeout for stop operation
+# How long to wait for graceful shutdown before SIGKILL
+TimeoutStopSec=30s
+
+# Abort start if it takes too long
+#TimeoutAbortSec=30s
+
+# Kill all processes in the service's cgroup on stop
+# Ensures no orphaned processes
+KillMode=mixed
+
+# Send this signal first when stopping
+KillSignal=SIGTERM
+
+# ============================================================================
+# WATCHDOG
+# ============================================================================
+
+# Enable watchdog (requires application support with sd_notify)
+# Application must send "WATCHDOG=1" periodically
+# If not received within this time, service is considered failed
+#WatchdogSec=30s
+
+# ============================================================================
+# ENVIRONMENT
+# ============================================================================
+
+Environment="APP_ENV=production"
+Environment="LOG_LEVEL=info"
+Environment="MAX_CONNECTIONS=100"
+
+# Load additional environment from file
+#EnvironmentFile=/etc/myapp/environment
+#EnvironmentFile=-/etc/myapp/environment.local
+
+# ============================================================================
+# LOGGING
+# ============================================================================
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=myapp
+
+# Log level for this unit
+#LogLevelMax=info
+
+# ============================================================================
+# RESOURCE LIMITS
+# ============================================================================
+
+# Limit CPU usage (percentage)
+#CPUQuota=80%
+
+# Limit memory usage
+#MemoryLimit=512M
+#MemoryMax=1G
+
+# Limit number of tasks (threads/processes)
+#TasksMax=100
+
+# Nice level (-20 to 19, lower = higher priority)
+#Nice=5
+
+# ============================================================================
+# SECURITY HARDENING (Optional but recommended)
+# ============================================================================
+
+# Restrict filesystem access
+# Service can only write to these directories
+#ReadWritePaths=/var/lib/myapp /var/log/myapp
+
+# Make filesystem read-only except for allowed paths
+#ProtectSystem=strict
+
+# Protect /home directories from access
+#ProtectHome=yes
+
+# Prevent access to /proc kernel interfaces
+#ProtectKernelTunables=yes
+
+# Prevent loading kernel modules
+#ProtectKernelModules=yes
+
+# Run with empty /tmp (isolated from system)
+#PrivateTmp=yes
+
+# Prevent access to other users' processes
+#ProtectProc=invisible
+
+# Restrict system calls (advanced)
+#SystemCallFilter=@system-service
+#SystemCallFilter=~@privileged @resources
+
+# Disable privilege escalation
+#NoNewPrivileges=yes
+
+# Restrict network access
+#RestrictAddressFamilies=AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target
+
+# ============================================================================
+# EXAMPLE CONFIGURATIONS
+# ============================================================================
+#
+# Web application (always running):
+#   Restart=always
+#   RestartSec=5s
+#   StartLimitBurst=10
+#   TimeoutStartSec=30s
+#
+# Background worker (retry on failure):
+#   Restart=on-failure
+#   RestartSec=30s
+#   StartLimitBurst=3
+#   TimeoutStartSec=60s
+#
+# Critical system service (aggressive restart):
+#   Restart=always
+#   RestartSec=1s
+#   StartLimitIntervalSec=0    # Unlimited restarts
+#   TimeoutStartSec=10s
+#
+# Database (careful restart):
+#   Restart=on-failure
+#   RestartSec=30s
+#   StartLimitBurst=3
+#   TimeoutStartSec=300s       # DB startup can be slow
+#   TimeoutStopSec=300s        # Allow graceful shutdown
+#
+# ============================================================================
+# TESTING AND DEBUGGING
+# ============================================================================
+#
+# Verify configuration:
+#   systemd-analyze verify /etc/systemd/system/myapp.service
+#
+# Test restart behavior:
+#   systemctl start myapp
+#   # Kill the process
+#   kill $(systemctl show --property MainPID --value myapp)
+#   # Watch it restart
+#   watch systemctl status myapp
+#
+# Check restart count:
+#   systemctl show myapp | grep -E 'NRestarts|Result'
+#
+# Reset restart counter:
+#   systemctl reset-failed myapp
+#
+# View all restart events:
+#   journalctl -u myapp | grep -i restart
+#
+# ============================================================================
+# COMMON PATTERNS
+# ============================================================================
+#
+# Pattern 1: Web server (must always run)
+#   Restart=always
+#   RestartSec=5s
+#
+# Pattern 2: Worker (retry failures, give up eventually)
+#   Restart=on-failure
+#   RestartSec=10s
+#   StartLimitBurst=5
+#
+# Pattern 3: Critical service (never give up)
+#   Restart=always
+#   RestartSec=1s
+#   StartLimitIntervalSec=0
+#
+# Pattern 4: Crash-only design (clean exit is success)
+#   Restart=on-success
+#   RestartSec=0

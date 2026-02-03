@@ -1,0 +1,256 @@
+# periodic-task.timer.example
+# Systemd timer unit - modern replacement for cron
+#
+# Copy to: /etc/systemd/system/periodic-task.timer
+# Enable:  systemctl enable periodic-task.timer
+# Start:   systemctl start periodic-task.timer
+# Status:  systemctl status periodic-task.timer
+# List:    systemctl list-timers
+#
+# Requires corresponding service file: periodic-task.service
+# Compatible with systemd 245+ (Ubuntu 20.04+)
+
+[Unit]
+Description=Periodic Task Timer (runs every 10 minutes)
+Documentation=man:systemd.timer(5)
+
+# Optional: Require the service file exists
+Requires=periodic-task.service
+
+[Timer]
+# ============================================================================
+# TIMING SPECIFICATION
+# ============================================================================
+
+# When to run relative to timer activation
+# Run 5 minutes after the timer is started
+#OnActiveSec=5min
+
+# When to run relative to boot
+# Run 10 minutes after system boot
+#OnBootSec=10min
+
+# When to run relative to systemd startup
+# Run 5 minutes after systemd itself starts
+#OnStartupSec=5min
+
+# Run at regular intervals
+# Most common option - like cron's interval
+OnUnitActiveSec=10min
+
+# Run at specific calendar times (like cron schedule)
+# This is the most powerful and flexible option
+# See "CALENDAR TIMES" section below for examples
+#OnCalendar=daily
+#OnCalendar=*-*-* 04:00:00
+
+# ============================================================================
+# RANDOMIZATION
+# ============================================================================
+
+# Add random delay (prevents thundering herd)
+# Useful when many systems run the same timer
+# Delay will be between 0 and this value
+#RandomizedDelaySec=5min
+
+# ============================================================================
+# PERSISTENT TIMERS
+# ============================================================================
+
+# If system was off when timer should have run, run it on next boot
+# Essential for tasks that must not be missed (like backups)
+Persistent=false
+
+# Set to true for important tasks:
+#Persistent=true
+
+# ============================================================================
+# ACCURACY
+# ============================================================================
+
+# Accuracy window for timer (power saving vs. precision)
+# Timer may fire within +/- this window
+# Higher values save power by coalescing timers
+# Default: 1min
+AccuracySec=1min
+
+# For strict timing requirements:
+#AccuracySec=1s
+
+# For power-efficient systems:
+#AccuracySec=5min
+
+# ============================================================================
+# SERVICE CONTROL
+# ============================================================================
+
+# Which service to run when timer triggers
+# Default: service with same name as timer
+# Uncomment to specify different service
+#Unit=periodic-task.service
+
+[Install]
+# Enable timer on system boot
+WantedBy=timers.target
+
+# ============================================================================
+# CALENDAR TIMES (OnCalendar=) EXAMPLES
+# ============================================================================
+#
+# Cron-style schedules:
+#
+#   Every minute:
+#     OnCalendar=*-*-* *:*:00
+#
+#   Every 5 minutes:
+#     OnCalendar=*-*-* *:00/5:00
+#
+#   Every hour:
+#     OnCalendar=hourly
+#     OnCalendar=*-*-* *:00:00
+#
+#   Every day at 3 AM:
+#     OnCalendar=daily
+#     OnCalendar=*-*-* 03:00:00
+#
+#   Every day at 4:30 AM:
+#     OnCalendar=*-*-* 04:30:00
+#
+#   Twice a day (6 AM and 6 PM):
+#     OnCalendar=*-*-* 06,18:00:00
+#
+#   Every week on Monday at 9 AM:
+#     OnCalendar=weekly
+#     OnCalendar=Mon *-*-* 09:00:00
+#
+#   Every month on the 1st at midnight:
+#     OnCalendar=monthly
+#     OnCalendar=*-*-01 00:00:00
+#
+#   Weekdays at 8 AM:
+#     OnCalendar=Mon..Fri *-*-* 08:00:00
+#
+#   Weekends at 10 AM:
+#     OnCalendar=Sat,Sun *-*-* 10:00:00
+#
+#   Last day of month:
+#     OnCalendar=*-*~01 00:00:00
+#
+#   Every 15 minutes:
+#     OnCalendar=*:0/15
+#
+#   Every 4 hours:
+#     OnCalendar=00/4:00:00
+#
+#   Business hours (9 AM to 5 PM on weekdays):
+#     OnCalendar=Mon..Fri 09..17:00:00
+#
+#   Quarterly (1st day of quarter at 2 AM):
+#     OnCalendar=*-01,04,07,10-01 02:00:00
+#
+# Test calendar expressions:
+#   systemd-analyze calendar "Mon..Fri 09:00:00"
+#   systemd-analyze calendar "weekly"
+#   systemd-analyze calendar "*:0/15"
+#
+# ============================================================================
+# COMMON USE CASES
+# ============================================================================
+#
+# Daily backup at 2 AM:
+#   OnCalendar=*-*-* 02:00:00
+#   Persistent=true
+#
+# Log rotation every hour:
+#   OnCalendar=hourly
+#   Persistent=false
+#
+# Monitoring check every 5 minutes:
+#   OnUnitActiveSec=5min
+#   Persistent=false
+#   AccuracySec=30s
+#
+# Cleanup task, once a week:
+#   OnCalendar=Sun 03:00:00
+#   RandomizedDelaySec=1h
+#   Persistent=true
+#
+# Health check every 30 seconds:
+#   OnUnitActiveSec=30s
+#   AccuracySec=5s
+#
+# Certificate renewal (Let's Encrypt):
+#   OnCalendar=daily
+#   OnCalendar=*-*-* 00,12:00:00
+#   RandomizedDelaySec=1h
+#   Persistent=true
+#
+# ============================================================================
+# TIMER VS CRON COMPARISON
+# ============================================================================
+#
+# Cron: 0 2 * * * /usr/local/bin/backup.sh
+# Timer:
+#   OnCalendar=*-*-* 02:00:00
+#   Unit=backup.service
+#
+# Cron: */5 * * * * /usr/local/bin/monitor.sh
+# Timer:
+#   OnUnitActiveSec=5min
+#   Unit=monitor.service
+#
+# Cron: 0 0 * * 0 /usr/local/bin/weekly-task.sh
+# Timer:
+#   OnCalendar=Sun 00:00:00
+#   Unit=weekly-task.service
+#
+# ============================================================================
+# USAGE COMMANDS
+# ============================================================================
+#
+# Install timer:
+#   sudo cp periodic-task.timer /etc/systemd/system/
+#   sudo cp periodic-task.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable periodic-task.timer
+#   sudo systemctl start periodic-task.timer
+#
+# Check timer status:
+#   systemctl status periodic-task.timer
+#   systemctl list-timers periodic-task.timer
+#
+# List all timers:
+#   systemctl list-timers
+#   systemctl list-timers --all
+#
+# View timer logs:
+#   journalctl -u periodic-task.timer
+#   journalctl -u periodic-task.service
+#
+# Manually trigger (run service now):
+#   sudo systemctl start periodic-task.service
+#
+# When will timer run next:
+#   systemctl list-timers periodic-task.timer
+#
+# View timer details:
+#   systemctl show periodic-task.timer
+#
+# Test calendar expression:
+#   systemd-analyze calendar "daily"
+#   systemd-analyze calendar "*-*-* 04:00:00"
+#
+# ============================================================================
+# ADVANTAGES OVER CRON
+# ============================================================================
+#
+# 1. Integrated logging (journalctl)
+# 2. Dependencies (start after network, database, etc.)
+# 3. Resource limits (CPU, memory)
+# 4. Security features (sandboxing)
+# 5. Persistent timers (catch up missed runs)
+# 6. Randomization (prevent thundering herd)
+# 7. Better visibility (systemctl list-timers)
+# 8. Unit testing (systemd-analyze)
+# 9. Monitoring integration
+# 10. Transient timers (systemd-run)

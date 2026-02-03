@@ -1,0 +1,325 @@
+# periodic-task.service.example
+# Service unit for periodic timer execution
+#
+# This service is triggered by: periodic-task.timer
+# Should NOT be enabled directly - the timer starts it
+#
+# Copy to: /etc/systemd/system/periodic-task.service
+# Do NOT enable: systemctl enable periodic-task.service
+# Timer will start it automatically
+#
+# Compatible with systemd 245+ (Ubuntu 20.04+)
+
+[Unit]
+Description=Periodic Task Execution
+Documentation=https://example.com/docs
+
+# Optional: Require network
+#After=network-online.target
+#Wants=network-online.target
+
+# Optional: Require database
+#After=postgresql.service
+#Wants=postgresql.service
+
+[Service]
+# ============================================================================
+# SERVICE TYPE FOR TIMERS
+# ============================================================================
+
+# Type for timer-triggered services
+# oneshot: Task runs to completion then exits (most common for timers)
+# simple:  Long-running task that doesn't need to exit
+Type=oneshot
+
+# ============================================================================
+# COMMAND EXECUTION
+# ============================================================================
+
+# The actual command to run
+ExecStart=/usr/local/bin/periodic-task.sh
+
+# Pre-execution checks (optional)
+# Validate environment before running
+#ExecStartPre=/usr/local/bin/check-prerequisites.sh
+
+# Post-execution cleanup (optional)
+# Always runs, even if ExecStart fails
+#ExecStopPost=/usr/local/bin/cleanup.sh
+
+# ============================================================================
+# USER AND PERMISSIONS
+# ============================================================================
+
+# Run as specific user (recommended - don't run as root)
+User=task-runner
+Group=task-runner
+
+# Working directory
+WorkingDirectory=/var/lib/periodic-task
+
+# ============================================================================
+# ENVIRONMENT
+# ============================================================================
+
+# Environment variables
+Environment="TASK_ENV=production"
+Environment="LOG_LEVEL=info"
+
+# Load from file
+#EnvironmentFile=/etc/periodic-task/environment
+
+# ============================================================================
+# TIMEOUTS
+# ============================================================================
+
+# Maximum time for task to complete
+# Task will be killed if it exceeds this
+TimeoutStartSec=300s
+
+# For long-running tasks:
+#TimeoutStartSec=1h
+#TimeoutStartSec=infinity
+
+# ============================================================================
+# LOGGING
+# ============================================================================
+
+# Send output to journal
+StandardOutput=journal
+StandardError=journal
+
+# Identifier for log filtering
+SyslogIdentifier=periodic-task
+
+# ============================================================================
+# RESOURCE LIMITS
+# ============================================================================
+
+# CPU quota (percentage)
+# Prevents task from consuming all CPU
+#CPUQuota=50%
+
+# Memory limit
+# Task is killed if it exceeds this
+#MemoryMax=512M
+
+# Disk I/O weight (10-1000, 100 is default)
+# Lower values reduce I/O priority
+#IOWeight=50
+
+# ============================================================================
+# SECURITY HARDENING
+# ============================================================================
+
+# Isolate /tmp from system
+PrivateTmp=yes
+
+# Make most of filesystem read-only
+#ProtectSystem=strict
+
+# Allow writing only to these paths
+#ReadWritePaths=/var/lib/periodic-task /var/log/periodic-task
+
+# Protect /home directories
+#ProtectHome=yes
+
+# Prevent privilege escalation
+#NoNewPrivileges=yes
+
+# Restrict network access (if task doesn't need network)
+#PrivateNetwork=yes
+
+# Or allow only specific address families
+#RestrictAddressFamilies=AF_INET AF_INET6
+
+# ============================================================================
+# FAILURE HANDLING
+# ============================================================================
+
+# What to do on failure
+# none:    Do nothing (default)
+# reboot:  Reboot system
+# This is appropriate for critical tasks
+#FailureAction=none
+
+# Notify on failure (requires OnFailure= in [Unit] section)
+#OnFailure=notify-admin.service
+
+# ============================================================================
+# EXAMPLE CONFIGURATIONS
+# ============================================================================
+#
+# 1. BACKUP TASK
+#   [Service]
+#   Type=oneshot
+#   ExecStart=/usr/local/bin/backup.sh
+#   User=backup
+#   TimeoutStartSec=3h
+#   StandardOutput=journal
+#
+# 2. LOG ROTATION
+#   [Service]
+#   Type=oneshot
+#   ExecStart=/usr/sbin/logrotate /etc/logrotate.conf
+#   User=root
+#   TimeoutStartSec=5min
+#   Nice=19
+#
+# 3. DATABASE MAINTENANCE
+#   [Service]
+#   Type=oneshot
+#   ExecStart=/usr/bin/vacuumdb -a -z
+#   User=postgres
+#   TimeoutStartSec=1h
+#   IOWeight=50
+#
+# 4. HEALTH CHECK
+#   [Service]
+#   Type=oneshot
+#   ExecStart=/usr/local/bin/health-check.sh
+#   User=monitor
+#   TimeoutStartSec=30s
+#   StandardOutput=journal
+#
+# 5. CERTIFICATE RENEWAL
+#   [Service]
+#   Type=oneshot
+#   ExecStart=/usr/bin/certbot renew --quiet
+#   User=root
+#   TimeoutStartSec=5min
+#
+# 6. DATA SYNC
+#   [Service]
+#   Type=oneshot
+#   ExecStart=/usr/bin/rsync -avz /data/ remote:/backup/
+#   User=sync
+#   TimeoutStartSec=2h
+#   CPUQuota=30%
+#
+# 7. CLEANUP TASK
+#   [Service]
+#   Type=oneshot
+#   ExecStart=/usr/local/bin/cleanup-old-files.sh
+#   User=cleanup
+#   TimeoutStartSec=30min
+#   Nice=19
+#   IOWeight=10
+#
+# 8. API HEALTH CHECK
+#   [Service]
+#   Type=oneshot
+#   ExecStart=/usr/local/bin/check-api-endpoints.sh
+#   User=monitor
+#   TimeoutStartSec=60s
+#   MemoryMax=128M
+#
+# 9. REPORT GENERATION
+#   [Service]
+#   Type=oneshot
+#   ExecStart=/usr/local/bin/generate-report.py
+#   ExecStartPost=/usr/local/bin/email-report.sh
+#   User=reports
+#   WorkingDirectory=/var/lib/reports
+#   TimeoutStartSec=30min
+#
+# 10. SYSTEM AUDIT
+#   [Service]
+#   Type=oneshot
+#   ExecStart=/usr/local/bin/system-audit.sh
+#   User=root
+#   StandardOutput=file:/var/log/audit/system-audit.log
+#   TimeoutStartSec=15min
+#
+# ============================================================================
+# REAL-WORLD EXAMPLES
+# ============================================================================
+#
+# Example: Daily backup with notification
+#
+# /etc/systemd/system/backup.service:
+#   [Unit]
+#   Description=Daily Backup Task
+#   OnFailure=backup-failed.service
+#
+#   [Service]
+#   Type=oneshot
+#   ExecStart=/usr/local/bin/backup.sh
+#   ExecStartPost=/usr/local/bin/backup-verify.sh
+#   User=backup
+#   StandardOutput=append:/var/log/backup.log
+#   StandardError=append:/var/log/backup.log
+#   TimeoutStartSec=4h
+#
+# /etc/systemd/system/backup.timer:
+#   [Unit]
+#   Description=Daily Backup Timer
+#
+#   [Timer]
+#   OnCalendar=*-*-* 02:00:00
+#   Persistent=true
+#   RandomizedDelaySec=30min
+#
+#   [Install]
+#   WantedBy=timers.target
+#
+# /etc/systemd/system/backup-failed.service:
+#   [Unit]
+#   Description=Backup Failure Notification
+#
+#   [Service]
+#   Type=oneshot
+#   ExecStart=/usr/local/bin/send-alert.sh "Backup failed"
+#
+# ============================================================================
+# TESTING
+# ============================================================================
+#
+# Test the service manually:
+#   sudo systemctl start periodic-task.service
+#   sudo systemctl status periodic-task.service
+#   journalctl -u periodic-task.service -n 50
+#
+# Check logs:
+#   journalctl -u periodic-task.service
+#   journalctl -u periodic-task.service --since "1 hour ago"
+#
+# View last run:
+#   systemctl status periodic-task.service
+#
+# Monitor in real-time:
+#   journalctl -u periodic-task.service -f
+#
+# ============================================================================
+# DEBUGGING
+# ============================================================================
+#
+# If service fails:
+#   1. Check status:    systemctl status periodic-task.service
+#   2. View logs:       journalctl -xe -u periodic-task.service
+#   3. Test manually:   /usr/local/bin/periodic-task.sh
+#   4. Check user:      sudo -u task-runner /usr/local/bin/periodic-task.sh
+#   5. Verify paths:    Ensure all paths in ExecStart are absolute
+#   6. Check perms:     ls -l /usr/local/bin/periodic-task.sh
+#
+# Common issues:
+#   - Script not executable: chmod +x /usr/local/bin/periodic-task.sh
+#   - Permission denied: Check user can access script and working directory
+#   - Timeout: Increase TimeoutStartSec or optimize script
+#   - Resource limits: Check MemoryMax, CPUQuota settings
+#
+# ============================================================================
+# NOTES
+# ============================================================================
+#
+# Important: Do NOT enable this service directly!
+#   systemctl enable periodic-task.service  # WRONG
+#
+# The timer enables and starts it automatically:
+#   systemctl enable periodic-task.timer    # CORRECT
+#
+# No [Install] section needed for timer-triggered services
+#
+# Multiple timers can trigger the same service:
+#   morning-task.timer -> periodic-task.service
+#   evening-task.timer -> periodic-task.service

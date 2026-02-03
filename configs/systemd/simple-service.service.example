@@ -1,0 +1,141 @@
+# simple-service.service.example
+# Basic systemd service unit file template
+#
+# Copy to: /etc/systemd/system/myservice.service
+# Enable:  systemctl enable myservice.service
+# Start:   systemctl start myservice.service
+# Status:  systemctl status myservice.service
+#
+# Compatible with systemd 245+ (Ubuntu 20.04+)
+
+[Unit]
+# Service description (shown in systemctl status)
+Description=My Application Service
+
+# Human-readable documentation
+Documentation=https://example.com/docs
+Documentation=man:myapp(8)
+
+# Start after network is available (common requirement)
+After=network.target
+
+# If this service requires a database, ensure it starts after
+#After=postgresql.service
+#After=mysql.service
+#After=redis.service
+
+# Make the database a hard requirement (service won't start without it)
+#Requires=postgresql.service
+
+# Soft dependency (start after if available, but don't fail if missing)
+#Wants=redis.service
+
+[Service]
+# How to start the service
+# Use absolute paths for security and clarity
+ExecStart=/usr/local/bin/myapp --config /etc/myapp/config.yml
+
+# Command to run before starting (optional)
+# Useful for setup tasks
+#ExecStartPre=/usr/local/bin/myapp-preflight-check
+#ExecStartPre=/bin/mkdir -p /var/run/myapp
+
+# Command to run after stopping (optional)
+# Useful for cleanup
+#ExecStopPost=/bin/rm -rf /var/run/myapp
+
+# Run as specific user (strongly recommended - don't run as root)
+User=myapp
+Group=myapp
+
+# Working directory for the service
+WorkingDirectory=/var/lib/myapp
+
+# Service type
+# simple:   Process doesn't fork (most common for modern apps)
+# forking:  Process forks and parent exits (traditional daemons)
+# oneshot:  Process exits after completing (for setup tasks)
+# notify:   Process sends ready notification (requires sd_notify support)
+Type=simple
+
+# Environment variables
+Environment="NODE_ENV=production"
+Environment="PORT=3000"
+
+# Load environment from file
+#EnvironmentFile=/etc/myapp/environment
+
+# Standard output/error handling
+# journal:  Send to systemd journal (recommended)
+# null:     Discard output
+# file:     Write to file
+StandardOutput=journal
+StandardError=journal
+
+# Syslog identifier (for log filtering)
+SyslogIdentifier=myapp
+
+[Install]
+# When to start this service (during boot)
+# multi-user.target: Normal multi-user system (most common)
+# graphical.target:  Graphical environment
+WantedBy=multi-user.target
+
+# ============================================================================
+# USAGE EXAMPLES
+# ============================================================================
+#
+# Install and enable:
+#   sudo cp simple-service.service.example /etc/systemd/system/myapp.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable myapp.service
+#   sudo systemctl start myapp.service
+#
+# Check status:
+#   systemctl status myapp.service
+#   journalctl -u myapp.service -f
+#
+# Stop and disable:
+#   sudo systemctl stop myapp.service
+#   sudo systemctl disable myapp.service
+#
+# ============================================================================
+# COMMON PATTERNS
+# ============================================================================
+#
+# Python application:
+#   ExecStart=/usr/bin/python3 /opt/myapp/main.py
+#   WorkingDirectory=/opt/myapp
+#   User=myapp
+#
+# Node.js application:
+#   ExecStart=/usr/bin/node /opt/myapp/server.js
+#   Environment="NODE_ENV=production"
+#   User=nodejs
+#
+# Shell script:
+#   ExecStart=/bin/bash /usr/local/bin/myscript.sh
+#   Type=oneshot
+#
+# Go binary:
+#   ExecStart=/usr/local/bin/myapp -config /etc/myapp.conf
+#   User=myapp
+#
+# ============================================================================
+# SECURITY NOTES
+# ============================================================================
+#
+# Always run as non-root user:
+#   1. Create dedicated user: useradd -r -s /bin/false myapp
+#   2. Set User=myapp in service file
+#   3. Ensure proper file permissions
+#
+# Test before enabling:
+#   sudo systemctl start myapp.service
+#   sudo systemctl status myapp.service
+#   journalctl -u myapp.service -n 50
+#
+# Common issues:
+#   - Permissions: Ensure user can read config and write logs
+#   - Paths: Always use absolute paths in ExecStart
+#   - Dependencies: Check After= directives if service fails to start
