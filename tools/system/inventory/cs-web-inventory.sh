@@ -2,6 +2,9 @@
 # cs-web-inventory.sh
 # Purpose: Read-only web server inventory for CentOS Stream webservers
 # Output: cs_web_inventory_<hostname>_<timestamp>.md
+# NOTE:
+# Informational commands are allowed to fail (|| true) to avoid false exits under `set -e`, especially on RHEL.
+
 
 set -euo pipefail
 
@@ -94,6 +97,38 @@ nginx_domains() {
   printf '%s\n' "${results[@]}" | sort -u
 }
 
+archive_latest_files() {
+  local d base max n
+  for d in /etc/letsencrypt/archive/*; do
+    [ -d "$d" ] || continue
+    base="$(basename "$d")"
+    max=""
+    for n in "$d"/cert*.pem; do
+      [ -f "$n" ] || continue
+      n="${n##*/cert}"
+      n="${n%.pem}"
+      if [ -z "$max" ] || [ "$n" -gt "$max" ]; then
+        max="$n"
+      fi
+    done
+    if [ -n "$max" ]; then
+      echo "# $base (latest: $max)"
+      printf '%s\n' \
+        "$d/cert${max}.pem" \
+        "$d/chain${max}.pem" \
+        "$d/fullchain${max}.pem" \
+        "$d/privkey${max}.pem"
+    fi
+  done
+}
+
+live_cert_files() {
+  if [ -d /etc/letsencrypt/live ]; then
+    find /etc/letsencrypt/live -maxdepth 2 \( -type l -o -type f \) \
+      \( -name "*.crt" -o -name "*.pem" \) -printf '%p -> %l\n' 2>/dev/null
+  fi
+}
+
 certbot_renewal_summary() {
   local f
   local any=0
@@ -122,7 +157,15 @@ certbot_renewal_summary() {
 }
 
 cron_hits_for_renewal() {
-  local paths=(/etc/crontab /etc/cron.d /etc/cron.daily /etc/cron.weekly /etc/cron.monthly)
+  local paths=(
+    /etc/crontab
+    /etc/cron.d
+    /etc/cron.daily
+    /etc/cron.weekly
+    /etc/cron.monthly
+    /var/spool/cron
+    /var/spool/cron/crontabs
+  )
   local found=0
   for p in "${paths[@]}"; do
     if [ -f "$p" ]; then
@@ -146,8 +189,13 @@ cron_hits_for_renewal() {
 
 systemd_renewal_timers() {
   if have systemctl; then
-    systemctl list-timers --all 2>/dev/null | awk 'NR==1 || /certbot|letsencrypt|acme\.sh/ {print}'
-    return 0
+    local timers
+    timers="$(systemctl list-timers --all 2>/dev/null)"
+    if printf '%s\n' "$timers" | grep -Eqi 'certbot|letsencrypt|acme\.sh'; then
+      printf '%s\n' "$timers" | awk 'NR==1 || /certbot|letsencrypt|acme\.sh/ {print}'
+      return 0
+    fi
+    return 1
   fi
   return 1
 }
@@ -170,7 +218,7 @@ echo "Collecting CentOS Stream web inventory for ${HOSTNAME}..."
     for svc in httpd nginx certbot; do
       if systemctl list-unit-files | grep -q "^${svc}\.service"; then
         md_h3 "${svc} service status"
-        systemctl status "$svc" --no-pager 2>/dev/null | md_code
+        systemctl status "$svc" --no-pager 2>/dev/null | md_code || true
       fi
     done
   else
@@ -184,10 +232,14 @@ echo "Collecting CentOS Stream web inventory for ${HOSTNAME}..."
 
     if have apachectl; then
       md_h3 "Virtual host map (apachectl -S)"
-      apachectl -S 2>/dev/null | md_code
+      if apachectl -S >/dev/null 2>&1; then
+        apachectl -S 2>/dev/null | md_code
+      else
+        md_note "apachectl -S returned no virtual host map (this can be normal on RHEL)."
+      fi
 
       md_h3 "Loaded modules"
-      apachectl -M 2>/dev/null | md_code
+      apachectl -M 2>/dev/null | md_code || true
     fi
 
     md_h3 "Configuration directories"
@@ -231,7 +283,7 @@ echo "Collecting CentOS Stream web inventory for ${HOSTNAME}..."
 
     md_h3 "Full configuration (nginx -T)"
     if nginx -T >/dev/null 2>&1; then
-      nginx -T 2>&1 | md_code
+      nginx -T 2>&1 | md_code || true
     else
       md_note "nginx -T not permitted or failed."
     fi
@@ -284,10 +336,28 @@ echo "Collecting CentOS Stream web inventory for ${HOSTNAME}..."
   fi
 
   md_h3 "Certificates on disk"
-  if [ -d /etc/letsencrypt ]; then
-    find /etc/letsencrypt -maxdepth 3 -type f \( -name "*.crt" -o -name "*.pem" \) 2>/dev/null | md_code
+  if have certbot; then
+    md_h4 "Certbot inventory (certbot certificates)"
+    certbot certificates 2>/dev/null | md_code || true
+  fi
+
+  if [ -d /etc/letsencrypt/live ]; then
+    md_h4 "Live certificate files (/etc/letsencrypt/live)"
+    LIVE_FILES="$(live_cert_files || true)"
+    if [ -n "${LIVE_FILES:-}" ]; then
+      printf '%s\n' "$LIVE_FILES" | md_code
+    else
+      md_note "No live certificate files found (only symlinks are expected here)."
+    fi
   else
-    md_note "No /etc/letsencrypt directory found."
+    md_note "No /etc/letsencrypt/live directory found."
+  fi
+
+  if [ -d /etc/letsencrypt/archive ]; then
+    md_h4 "Archive certificate files (/etc/letsencrypt/archive)"
+    archive_latest_files 2>/dev/null | md_code
+  else
+    md_note "No /etc/letsencrypt/archive directory found."
   fi
 
   echo "---"
