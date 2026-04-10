@@ -19,7 +19,14 @@ They focus on:
 ## Current Cheat Sheets
 
 - [bash.md](bash.md) - Bash scripting and command-line reference
+- [cron.md](cron.md) - cron scheduling and crontab management
+- [docker.md](docker.md) - Docker container and image operations
 - [git.md](git.md) - Git version control commands
+- [networking.md](networking.md) - ip, ss, and nmap reference
+- [openssl.md](openssl.md) - keys, certificates, TLS inspection, and crypto operations
+- [rsync.md](rsync.md) - local and remote file synchronisation
+- [systemd.md](systemd.md) - systemd service management, timers, and journald
+- [text-processing.md](text-processing.md) - grep, sed, and awk reference
 - [tmux.md](tmux.md) - Terminal multiplexer shortcuts
 - [vim.md](vim.md) - Vim editor commands and motions
 
