@@ -47,7 +47,6 @@ If something is clever but hard to understand, it probably does not belong here.
 This repo is split into a few top-level directories like:
 - docs
 - scripts
-- tools
 - snippets
 - configs
 - cheat-sheets
@@ -63,13 +62,12 @@ If you are unsure where something should go, check the README in that directory 
 ## Scripts, tools, and everything else
 
 In general:
-- Scripts are small, focused, and easy to audit
-- Tools are bigger or made of multiple pieces
+- Scripts are organized by domain: system, networking, security, utils
 - Snippets are short examples or reminders
 - Cheat sheets are quick references
 - Archive is where old or replaced things go
 
-If you are hesitating, start with scripts. It is easier to move things later than to overthink it.
+If you are unsure where a script belongs, pick the domain closest to its purpose.
 
 ---
 

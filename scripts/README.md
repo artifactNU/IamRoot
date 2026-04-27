@@ -1,43 +1,34 @@
 # Scripts
 
-This directory contains **small, focused executable scripts**.
+This directory contains all executable scripts, organized by **domain**.
 
-Scripts here are meant to be:
+Scripts are meant to be:
 - run directly by an administrator
-- short-lived in execution
 - easy to read and modify
-- safe by default
+- safe by default (read-only unless explicitly documented otherwise)
 
 ---
 
 ## Structure
 
-Scripts are organized first by **language**, then by **purpose**.
-
-Example:
-
     scripts/
-      bash/
-        monitoring/
-        backup/
-        utils/
-      python/
-        monitoring/
-        automation/
-      perl/
-        legacy/
+      system/      # OS-level: health, inventory, diagnostics, backup
+      networking/  # Network diagnostics, scanning, packet capture
+      security/    # Auditing, hardening, forensics, login analysis
+      utils/       # General-purpose helpers
+
+Scripts may be written in Bash, Perl, or Python. Language does not determine placement — domain does.
 
 ---
 
 ## What Belongs Here
 
-- Health checks
-- Quick diagnostics
-- Disk or resource usage checks
-- Small maintenance helpers
-- One-task scripts
+- Health checks and diagnostics
+- Inventory and audit collectors
+- Security and log analysis
+- Maintenance helpers
 
-Scripts should generally:
+Scripts should:
 - Do one thing
 - Produce human-readable output
 - Fail gracefully when dependencies are missing
@@ -46,7 +37,6 @@ Scripts should generally:
 
 ## What Does NOT Belong Here
 
-- Large report generators (use `tools/`)
 - Long-running daemons
 - Configuration management logic
 - Scripts that modify system state without explicit intent
@@ -62,16 +52,15 @@ All scripts must include a header:
     # Purpose: One-line description
     # Usage:   ./script-name.sh [options]
 
-Scripts should be:
-- Read-only by default
-- Explicit about any side effects
-- Compatible with Ubuntu LTS releases
+Bash scripts should use `set -euo pipefail` unless intentionally fault-tolerant.  
+Python scripts should target Python 3.8+ and use `#!/usr/bin/env python3`.  
+Perl scripts should use `use strict; use warnings; use autodie;`.
 
 ---
 
 ## Output
 
 Scripts are primarily for **interactive use**.
-Machine-readable output is optional and not required.
+Machine-readable output (e.g. `--json`) is optional.
 
-If output is meant to become documentation, consider placing the script under `tools/` instead.
+Inventory-style scripts that produce long-lived documentation output should prefer Markdown and support redaction of sensitive data.

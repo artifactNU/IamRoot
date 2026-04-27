@@ -47,17 +47,10 @@ High-level structure:
     │
     ├── scripts/
     │   ├── README.md
-    │   ├── bash/
-    │   ├── python/
-    │   └── perl/
-    │
-    ├── tools/
-    │   ├── README.md
     │   ├── system/
-    │   │   ├── inventory/
-    │   │   └── diagnostics/
     │   ├── networking/
-    │   └── security/
+    │   ├── security/
+    │   └── utils/
     │
     ├── snippets/
     │   ├── README.md
@@ -91,37 +84,17 @@ If it reads like a wiki page or teaching material, it belongs here.
 ---
 
 ### scripts/
-Small, focused **utilities** intended to be run directly.
+All executable scripts, organized by **domain**.
 
-- Short-lived execution
-- Often run interactively
-- Usually one concern per script
+Subdirectories:
+- `system/` — health checks, inventory, diagnostics, backup
+- `networking/` — scanning, packet capture, network diagnostics
+- `security/` — login auditing, hardening, forensics
+- `utils/` — general-purpose helpers
 
-Examples:
-- health checks
-- disk usage checks
-- quick diagnostics
-- cleanup helpers
+Scripts may be Bash, Perl, or Python. Language does not determine placement — domain does.
 
-Subdirectories reflect language and purpose.
-
----
-
-### tools/
-Larger or more structured helpers.
-
-These often:
-- Generate reports
-- Produce documentation-ready output
-- Collect inventory or system state
-- Are run less frequently, but more deliberately
-
-Examples:
-- workstation inventory generators
-- GPU diagnostics bundles
-- system audit collectors
-
-Inventory-related tools must consider **redaction** and **publishability**.
+Scripts range from small one-task utilities to larger report generators. Inventory-style scripts must consider **redaction** and **publishability**.
 
 ---
 
