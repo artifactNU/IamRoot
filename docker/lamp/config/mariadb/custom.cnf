@@ -1,0 +1,6 @@
+[mysqld]
+character-set-server  = utf8mb4
+collation-server      = utf8mb4_unicode_ci
+
+; Adjust buffer pool size to roughly 70% of available RAM for DB-heavy workloads
+innodb_buffer_pool_size = 128M
