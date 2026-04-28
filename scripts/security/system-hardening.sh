@@ -1,8 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ################################################################################
-# System Security Hardening Tool
-# 
+# system-hardening.sh
+# Purpose: Audit or apply security hardening measures on a Linux system
+# Usage:   ./system-hardening.sh [--audit|--apply|--help]
+# Exit:    0 OK or warnings only, 1 failed checks
+#
 # Description: Audits and applies security hardening measures for Linux systems.
 #              WARNING: In --apply mode this tool WILL modify system settings.
 #              In --audit mode it only reads system state and does NOT change it.

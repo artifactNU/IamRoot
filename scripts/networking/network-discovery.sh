@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 #
 # network-discovery.sh
-# 
+# Purpose: Discover live hosts and scan for open ports on a network segment
+# Usage:   ./network-discovery.sh [OPTIONS] <network-cidr>
+# Exit:    0 OK, 1 no hosts found or error
+#
 # Discover live hosts and common open ports on a network segment.
 # Useful for network inventory, troubleshooting connectivity, and security audits.
 #

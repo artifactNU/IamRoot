@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 #
 # packet-capture.sh
-# 
+# Purpose: Capture and analyze network packets; a tcpdump wrapper for common use cases
+# Usage:   sudo ./packet-capture.sh [-i IFACE] [-p PORTS] [-w FILE] [--help]
+# Exit:    0 OK, 1 ERROR
+#
 # Capture and analyze network packets for troubleshooting and monitoring.
 # Provides a user-friendly wrapper around tcpdump with common use cases.
 #

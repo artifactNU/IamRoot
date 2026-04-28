@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 #
 # collect-evidence.sh
+# Purpose: Collect forensic evidence snapshots for incident response analysis
+# Usage:   sudo ./collect-evidence.sh [-o DIR] [-q] [-m] [--help]
+# Exit:    0 OK, 1 ERROR
 #
 # Collect forensic evidence from a Linux system for incident response and analysis.
 # Gathers system state, logs, network info, processes, and file metadata while
