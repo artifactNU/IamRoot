@@ -4,6 +4,7 @@ rotate-logs.py
 Purpose: Automate log rotation and compression with configurable retention
 Usage:   ./rotate-logs.py CONFIG_FILE
 Exit:    0 OK, 1 ERROR
+WARNING: DESTRUCTIVE — truncates live logs and deletes old rotations; use --dry-run first
 
 Dependencies: None (uses Python standard library only)
 """

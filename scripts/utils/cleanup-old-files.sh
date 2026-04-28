@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # cleanup-old-files.sh
-# Purpose: Safely find and remove old files with size/age filters
+# Purpose: Find and remove old files with age/size/pattern filters
 # Usage:   ./cleanup-old-files.sh DIRECTORY [OPTIONS]
 # Exit:    0 OK, 1 ERROR
+# WARNING: DESTRUCTIVE — permanently deletes files; always run with --dry-run first
 
 set -euo pipefail
 
