@@ -46,4 +46,5 @@ credentials/
 # Ansible — real infrastructure details never committed
 ansible/inventories/local/
 ansible/.vault_pass
+ansible/ansible.cfg
 *.retry

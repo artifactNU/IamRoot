@@ -1,0 +1,84 @@
+# ansible.cfg.example
+# Copy to ansible/ansible.cfg and adjust for your environment.
+# ansible.cfg is gitignored — it contains local paths and should not be committed.
+#
+# Ansible reads config from the first location it finds:
+#   1. ANSIBLE_CONFIG env var
+#   2. ./ansible.cfg  (current directory — recommended for this repo)
+#   3. ~/.ansible.cfg
+#   4. /etc/ansible/ansible.cfg
+
+[defaults]
+
+# Default inventory — avoids typing -i on every command.
+# Point at your real inventory once copied to inventories/local/.
+inventory = inventories/local/hosts.ini
+
+# Remote user for all connections.
+# Can be overridden per host in host_vars or per play with `remote_user`.
+remote_user = deploy
+
+# SSH private key. Comment out to use ssh-agent (preferred).
+# private_key_file = ~/.ssh/id_ed25519
+
+# Disable strict host key checking for new hosts.
+# Set to True in production once known_hosts is populated.
+host_key_checking = False
+
+# Number of hosts to operate on in parallel.
+# Increase for large inventories; reduce if hosts are slow or CPU-bound.
+forks = 10
+
+# SSH connection timeout in seconds.
+timeout = 30
+
+# Richer, easier-to-read output. Other options: minimal, oneline, debug.
+stdout_callback = yaml
+
+# Write a log file for every run.
+# log_path = ~/.ansible/ansible.log
+
+# Disable .retry files — they clutter the working directory.
+retry_files_enabled = False
+
+# Explicit Python interpreter — avoids the auto-discovery warning on Ubuntu 22+.
+interpreter_python = /usr/bin/python3
+
+# Path Ansible uses to find roles referenced without a full path.
+roles_path = roles
+
+[privilege_escalation]
+
+# Default to using sudo for privilege escalation.
+become = True
+become_method = sudo
+become_user = root
+
+# Prompt for the sudo password interactively.
+# Set to False and use vault_become_pass from vault.yml instead.
+become_ask_pass = False
+
+[ssh_connection]
+
+# SSH multiplexing — reuses the same TCP connection across tasks.
+# Significantly speeds up playbook runs against the same host.
+ssh_args = -o ControlMaster=auto -o ControlPersist=60s -o StrictHostKeyChecking=no
+
+# Pipelining reduces the number of SSH connections per task by sending
+# modules over stdin instead of copying them as files.
+# Requires `Defaults !requiretty` in /etc/sudoers on managed hosts.
+pipelining = True
+
+[colors]
+
+# Adjust if your terminal has a light background.
+# highlight = white
+# verbose   = blue
+# warn      = bright purple
+# error     = red
+# debug     = dark gray
+# deprecate = purple
+# skip      = cyan
+# unreachable = red
+# ok        = green
+# changed   = yellow
