@@ -1,0 +1,67 @@
+---
+# harden-ssh.yml
+# Purpose: Harden SSH daemon configuration on Debian/Ubuntu hosts
+# Usage:   ansible-playbook -i inventories/local/hosts.ini playbooks/security/harden-ssh.yml --check --diff
+# Tags:    ssh
+#
+# Always run with --check --diff first. If PasswordAuthentication is being
+# disabled, confirm key-based access works before applying for real.
+
+- name: Harden SSH daemon configuration
+  hosts: all
+  become: true
+
+  vars:
+    sshd_config: /etc/ssh/sshd_config
+
+  handlers:
+    - name: Restart ssh
+      ansible.builtin.service:
+        name: ssh
+        state: restarted
+
+  tasks:
+    - name: Disable root login (permit key-based only)
+      ansible.builtin.lineinfile:
+        path: "{{ sshd_config }}"
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin prohibit-password'
+      notify: Restart ssh
+      tags: ssh
+
+    - name: Disable password authentication
+      ansible.builtin.lineinfile:
+        path: "{{ sshd_config }}"
+        regexp: '^#?PasswordAuthentication'
+        line: 'PasswordAuthentication no'
+      notify: Restart ssh
+      tags: ssh
+
+    - name: Disable empty passwords
+      ansible.builtin.lineinfile:
+        path: "{{ sshd_config }}"
+        regexp: '^#?PermitEmptyPasswords'
+        line: 'PermitEmptyPasswords no'
+      notify: Restart ssh
+      tags: ssh
+
+    - name: Disable X11 forwarding
+      ansible.builtin.lineinfile:
+        path: "{{ sshd_config }}"
+        regexp: '^#?X11Forwarding'
+        line: 'X11Forwarding no'
+      notify: Restart ssh
+      tags: ssh
+
+    - name: Set max authentication attempts to 4
+      ansible.builtin.lineinfile:
+        path: "{{ sshd_config }}"
+        regexp: '^#?MaxAuthTries'
+        line: 'MaxAuthTries 4'
+      notify: Restart ssh
+      tags: ssh
+
+    - name: Validate sshd configuration
+      ansible.builtin.command: /usr/sbin/sshd -t
+      changed_when: false
+      tags: ssh
