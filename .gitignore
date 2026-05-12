@@ -42,3 +42,8 @@ CLAUDE.md
 *.pem
 secrets/
 credentials/
+
+# Ansible — real infrastructure details never committed
+ansible/inventories/local/
+ansible/.vault_pass
+*.retry

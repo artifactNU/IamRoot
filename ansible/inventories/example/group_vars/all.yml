@@ -1,0 +1,15 @@
+# group_vars/all.yml — variables applied to every host.
+# Secrets use the vault_ prefix and are stored encrypted via ansible-vault.
+# This file shows structure only — no real values here.
+
+# Timezone
+system_timezone: "Europe/Stockholm"
+
+# NTP servers
+ntp_servers:
+  - "0.pool.ntp.org"
+  - "1.pool.ntp.org"
+
+# Example of a vaulted secret reference.
+# The actual value lives in group_vars/all/vault.yml (ansible-vault encrypted).
+# ansible_become_pass: "{{ vault_become_pass }}"
