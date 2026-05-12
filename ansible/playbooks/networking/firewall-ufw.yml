@@ -1,0 +1,106 @@
+---
+# firewall-ufw.yml
+# Purpose: Configure UFW firewall with baseline rules on Debian/Ubuntu hosts
+# Usage:   ansible-playbook -i inventories/local/hosts.ini playbooks/networking/firewall-ufw.yml --check --diff
+# Tags:    ufw, ssh, web, monitoring
+# Requires: community.general collection (ansible-galaxy collection install community.general)
+#
+# Always run with --check --diff first.
+# SSH (port 22) is allowed before UFW is enabled to prevent lockout.
+# Group-specific ports use vars defined in group_vars — override per host in host_vars if needed.
+
+- name: Configure UFW firewall
+  hosts: all
+  become: true
+
+  vars:
+    # Override ssh_port in host_vars if any host uses a non-standard port
+    ssh_port: 22
+
+  handlers:
+    - name: Reload ufw
+      community.general.ufw:
+        state: reloaded
+
+  tasks:
+
+    - name: Install ufw
+      ansible.builtin.apt:
+        name: ufw
+        state: present
+        update_cache: yes
+      tags: ufw
+
+    - name: Set default incoming policy to deny
+      community.general.ufw:
+        direction: incoming
+        policy: deny
+      tags: ufw
+
+    - name: Set default outgoing policy to allow
+      community.general.ufw:
+        direction: outgoing
+        policy: allow
+      tags: ufw
+
+    # SSH must be allowed before UFW is enabled — do this unconditionally
+    - name: Allow SSH (prevents lockout)
+      community.general.ufw:
+        rule: allow
+        port: "{{ ssh_port | string }}"
+        proto: tcp
+        comment: SSH
+      tags:
+        - ufw
+        - ssh
+
+    # Web ports — applied only to hosts in the webservers group
+    - name: Allow HTTP
+      community.general.ufw:
+        rule: allow
+        port: "{{ http_port | string }}"
+        proto: tcp
+        comment: HTTP
+      when: inventory_hostname in groups['webservers']
+      tags:
+        - ufw
+        - web
+
+    - name: Allow HTTPS
+      community.general.ufw:
+        rule: allow
+        port: "{{ https_port | string }}"
+        proto: tcp
+        comment: HTTPS
+      when: inventory_hostname in groups['webservers']
+      tags:
+        - ufw
+        - web
+
+    # Monitoring ports — applied only to hosts in the monitoring group
+    - name: Allow Prometheus
+      community.general.ufw:
+        rule: allow
+        port: "{{ prometheus_port | string }}"
+        proto: tcp
+        comment: Prometheus
+      when: inventory_hostname in groups['monitoring']
+      tags:
+        - ufw
+        - monitoring
+
+    - name: Allow Grafana
+      community.general.ufw:
+        rule: allow
+        port: "{{ grafana_port | string }}"
+        proto: tcp
+        comment: Grafana
+      when: inventory_hostname in groups['monitoring']
+      tags:
+        - ufw
+        - monitoring
+
+    - name: Enable UFW
+      community.general.ufw:
+        state: enabled
+      tags: ufw
