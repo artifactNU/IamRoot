@@ -1,0 +1,12 @@
+# group_vars/monitoring.yml
+# Variables applied to all hosts in the [monitoring] group.
+
+prometheus_port: 9090
+alertmanager_port: 9093
+grafana_port: 3000
+
+# Where alerts are routed
+alert_email: "ops@example.com"
+
+# Retention period for Prometheus data
+prometheus_retention: "30d"

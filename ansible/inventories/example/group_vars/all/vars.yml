@@ -1,0 +1,22 @@
+# group_vars/all/vars.yml
+# Variables that apply to every host in the inventory.
+# Secrets are never stored here — reference vault_ vars from vault.yml instead.
+
+# Connection
+ansible_user: deploy
+ansible_python_interpreter: /usr/bin/python3
+
+# Timezone
+system_timezone: "Europe/Stockholm"
+
+# NTP
+ntp_servers:
+  - "0.pool.ntp.org"
+  - "1.pool.ntp.org"
+
+# Centralised syslog (set to your real server in inventories/local/)
+syslog_server: "syslog.example.com"
+syslog_port: 514
+
+# Become password sourced from vault
+ansible_become_pass: "{{ vault_become_pass }}"

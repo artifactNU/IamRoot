@@ -1,0 +1,8 @@
+# group_vars/all/vault.yml
+# THIS FILE MUST BE ENCRYPTED before committing to any real inventory.
+# In inventories/local/ run: ansible-vault encrypt group_vars/all/vault.yml
+#
+# This example file shows the expected variable names and structure only.
+# Replace placeholder values when copying to inventories/local/.
+
+vault_become_pass: "REPLACE_ME"

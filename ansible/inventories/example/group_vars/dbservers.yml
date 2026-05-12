@@ -1,0 +1,13 @@
+# group_vars/dbservers.yml
+# Variables applied to all hosts in the [dbservers] group.
+
+db_port: 5432
+db_name: appdb
+db_user: appuser
+
+# Secret sourced from vault — define vault_db_password in group_vars/all/vault.yml
+# or in a dbservers-specific vault file if you want tighter scoping.
+db_password: "{{ vault_db_password }}"
+
+db_max_connections: 100
+db_data_dir: /var/lib/postgresql/data

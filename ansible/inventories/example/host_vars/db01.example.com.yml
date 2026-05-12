@@ -1,0 +1,10 @@
+# host_vars/db01.example.com.yml
+# Host-specific overrides for db01. These take precedence over group_vars.
+
+# Production DB handles more concurrent connections than the group default
+db_max_connections: 200
+
+# Enable automated backups on this host
+backup_enabled: true
+backup_dir: /var/backups/postgresql
+backup_retention_days: 14

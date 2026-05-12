@@ -1,0 +1,12 @@
+# host_vars/web01.example.com.yml
+# Host-specific overrides for web01. These take precedence over group_vars.
+
+# This host handles more traffic — override the group default
+nginx_worker_processes: 4
+
+# This is the primary web node (used in playbooks for primary-only tasks)
+is_primary: true
+
+# Host-specific TLS cert (different SAN from web02)
+tls_cert: /etc/ssl/certs/web01.example.com.crt
+tls_key: /etc/ssl/private/web01.example.com.key

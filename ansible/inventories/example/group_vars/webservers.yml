@@ -1,0 +1,13 @@
+# group_vars/webservers.yml
+# Variables applied to all hosts in the [webservers] group.
+
+http_port: 80
+https_port: 443
+web_root: /var/www/html
+
+nginx_worker_processes: auto
+nginx_worker_connections: 1024
+
+# TLS certificate paths — adjust per host in host_vars if certs differ
+tls_cert: /etc/ssl/certs/example.crt
+tls_key: /etc/ssl/private/example.key
