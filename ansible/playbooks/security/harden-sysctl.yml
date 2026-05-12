@@ -1,0 +1,75 @@
+---
+# harden-sysctl.yml
+# Purpose: Apply kernel security parameters via sysctl on Debian/Ubuntu hosts
+# Usage:   ansible-playbook -i inventories/local/hosts.ini playbooks/security/harden-sysctl.yml --check --diff
+# Tags:    network, kernel
+# Requires: ansible.posix collection (ansible-galaxy collection install ansible.posix)
+#
+# Settings are written to /etc/sysctl.d/99-hardening.conf and applied live.
+# Skip net.ipv4.ip_forward if the host is a router or runs Docker/LXC.
+
+- name: Apply sysctl security hardening
+  hosts: all
+  become: true
+
+  vars:
+    sysctl_file: /etc/sysctl.d/99-hardening.conf
+
+    sysctl_network:
+      # Disable IPv4 packet forwarding (not a router)
+      - { name: net.ipv4.ip_forward,                          value: '0' }
+      # Reject ICMP redirects — prevents routing table manipulation
+      - { name: net.ipv4.conf.all.accept_redirects,           value: '0' }
+      - { name: net.ipv4.conf.default.accept_redirects,       value: '0' }
+      - { name: net.ipv4.conf.all.secure_redirects,           value: '0' }
+      - { name: net.ipv4.conf.default.secure_redirects,       value: '0' }
+      # Disable source routing
+      - { name: net.ipv4.conf.all.accept_source_route,        value: '0' }
+      - { name: net.ipv4.conf.default.accept_source_route,    value: '0' }
+      # Enable reverse path filtering — drops spoofed packets
+      - { name: net.ipv4.conf.all.rp_filter,                  value: '1' }
+      - { name: net.ipv4.conf.default.rp_filter,              value: '1' }
+      # Enable SYN cookies — SYN flood protection
+      - { name: net.ipv4.tcp_syncookies,                      value: '1' }
+      # Log packets with impossible source addresses
+      - { name: net.ipv4.conf.all.log_martians,               value: '1' }
+      - { name: net.ipv4.conf.default.log_martians,           value: '1' }
+      # Ignore broadcast ICMP — reduces amplification risk
+      - { name: net.ipv4.icmp_echo_ignore_broadcasts,         value: '1' }
+      # Ignore bogus ICMP error responses
+      - { name: net.ipv4.icmp_ignore_bogus_error_responses,   value: '1' }
+      # Disable IPv6 redirects
+      - { name: net.ipv6.conf.all.accept_redirects,           value: '0' }
+      - { name: net.ipv6.conf.default.accept_redirects,       value: '0' }
+      - { name: net.ipv6.conf.all.accept_source_route,        value: '0' }
+
+    sysctl_kernel:
+      # Full ASLR — randomise memory layout
+      - { name: kernel.randomize_va_space,  value: '2' }
+      # Restrict dmesg to privileged users
+      - { name: kernel.dmesg_restrict,      value: '1' }
+      # Hide kernel pointers from unprivileged users
+      - { name: kernel.kptr_restrict,       value: '2' }
+      # Prevent setuid programs from dumping core
+      - { name: fs.suid_dumpable,           value: '0' }
+
+  tasks:
+    - name: Apply network hardening sysctl settings
+      ansible.posix.sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        state: present
+        reload: true
+        sysctl_file: "{{ sysctl_file }}"
+      loop: "{{ sysctl_network }}"
+      tags: network
+
+    - name: Apply kernel hardening sysctl settings
+      ansible.posix.sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        state: present
+        reload: true
+        sysctl_file: "{{ sysctl_file }}"
+      loop: "{{ sysctl_kernel }}"
+      tags: kernel
