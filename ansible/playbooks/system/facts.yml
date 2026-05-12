@@ -1,0 +1,70 @@
+---
+# facts.yml
+# Purpose: Display key system facts across all hosts — read-only, no changes made
+# Usage:   ansible-playbook -i inventories/local/hosts.ini playbooks/system/facts.yml
+# Tags:    os, cpu, memory, disk, network
+
+- name: Gather and display system facts
+  hosts: all
+  gather_facts: true
+
+  tasks:
+
+    - name: OS and kernel
+      ansible.builtin.debug:
+        msg:
+          - "Hostname    : {{ ansible_hostname }}"
+          - "OS          : {{ ansible_distribution }} {{ ansible_distribution_version }}"
+          - "Kernel      : {{ ansible_kernel }}"
+          - "Arch        : {{ ansible_architecture }}"
+          - "Uptime (s)  : {{ ansible_uptime_seconds }}"
+      tags: os
+
+    - name: CPU
+      ansible.builtin.debug:
+        msg:
+          - "vCPUs       : {{ ansible_processor_vcpus }}"
+          - "Cores/socket: {{ ansible_processor_cores }}"
+          - "Model       : {{ ansible_processor | select('match', '.*MHz.*') | list | first | default(ansible_processor[2] | default('unknown')) }}"
+      tags: cpu
+
+    - name: Memory
+      ansible.builtin.debug:
+        msg:
+          - "Total RAM   : {{ (ansible_memtotal_mb / 1024) | round(1) }} GB ({{ ansible_memtotal_mb }} MB)"
+          - "Free RAM    : {{ (ansible_memfree_mb / 1024) | round(1) }} GB ({{ ansible_memfree_mb }} MB)"
+          - "Swap total  : {{ (ansible_swaptotal_mb / 1024) | round(1) }} GB"
+          - "Swap free   : {{ (ansible_swapfree_mb / 1024) | round(1) }} GB"
+      tags: memory
+
+    - name: Block devices
+      ansible.builtin.debug:
+        msg: "{{ ansible_devices | dict2items
+              | selectattr('value.model', 'defined')
+              | selectattr('value.model', '!=', 'None')
+              | map(attribute='key')
+              | map('regex_replace', '^(.*)$',
+                  '\\1')
+              | list }}"
+      tags: disk
+
+    - name: Disk detail
+      ansible.builtin.debug:
+        msg: "{{ item.key }}: size={{ item.value.size | default('unknown') }} model={{ item.value.model | default('unknown') }}"
+      loop: "{{ ansible_devices | dict2items | selectattr('value.model', 'defined') | list }}"
+      loop_control:
+        label: "{{ item.key }}"
+      tags: disk
+
+    - name: Network interfaces
+      ansible.builtin.debug:
+        msg:
+          - "Default IPv4: {{ ansible_default_ipv4.address | default('none') }} via {{ ansible_default_ipv4.interface | default('none') }}"
+          - "Interfaces  : {{ ansible_interfaces | join(', ') }}"
+      tags: network
+
+    - name: Interface addresses
+      ansible.builtin.debug:
+        msg: "{{ item }}: {{ hostvars[inventory_hostname]['ansible_' + item | replace('-', '_')]['ipv4']['address'] | default('no IPv4') }}"
+      loop: "{{ ansible_interfaces | reject('equalto', 'lo') | list }}"
+      tags: network
